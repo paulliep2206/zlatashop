@@ -145,7 +145,6 @@ export default async function CategoryPage({ params }: Args) {
     },
   })
 
-  console.log(products)
   return (
     <div className="container py-8">
       <div className="mb-8">

@@ -7,17 +7,21 @@ import { useRouter } from 'next/navigation'
 import React, { useCallback, FormEvent } from 'react'
 import { useCart, usePayments } from '@payloadcms/plugin-ecommerce/client/react'
 import { Address } from '@/payload-types'
+import type { NovaPoshtaDelivery } from '@/integrations/nova-poshta/types'
+import { NOVA_POSHTA_DELIVERY_STORAGE_KEY } from '@/components/checkout/NovaPoshtaOfficeSelector'
 
 type Props = {
   customerEmail?: string
   billingAddress?: Partial<Address>
   shippingAddress?: Partial<Address>
+  novaPoshtaDelivery?: NovaPoshtaDelivery
   setProcessingPayment: React.Dispatch<React.SetStateAction<boolean>>
 }
 
 export const CheckoutForm: React.FC<Props> = ({
   customerEmail,
   billingAddress,
+  novaPoshtaDelivery,
   setProcessingPayment,
 }) => {
   const stripe = useStripe()
@@ -31,6 +35,10 @@ export const CheckoutForm: React.FC<Props> = ({
   const handleSubmit = useCallback(
     async (e: FormEvent) => {
       e.preventDefault()
+      if (!novaPoshtaDelivery) {
+        setError('Select a Nova Poshta office before paying.')
+        return
+      }
       setIsLoading(true)
       setProcessingPayment(true)
 
@@ -66,6 +74,7 @@ export const CheckoutForm: React.FC<Props> = ({
                 additionalData: {
                   paymentIntentID: paymentIntent.id,
                   ...(customerEmail ? { customerEmail } : {}),
+                  novaPoshtaDelivery,
                 },
               })
 
@@ -91,6 +100,7 @@ export const CheckoutForm: React.FC<Props> = ({
 
                 // Clear the cart after successful payment
                 clearCart()
+                sessionStorage.removeItem(NOVA_POSHTA_DELIVERY_STORAGE_KEY)
 
                 // Redirect to order confirmation page
                 router.push(redirectUrl)
@@ -119,6 +129,7 @@ export const CheckoutForm: React.FC<Props> = ({
       stripe,
       elements,
       customerEmail,
+      novaPoshtaDelivery,
       billingAddress?.phone,
       billingAddress?.addressLine1,
       billingAddress?.addressLine2,

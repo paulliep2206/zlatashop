@@ -247,6 +247,7 @@ export interface Order {
     postalCode?: string | null;
     country?: string | null;
     phone?: string | null;
+    fatherName?: string | null;
   };
   customer?: (number | null) | User;
   customerEmail?: string | null;
@@ -255,6 +256,18 @@ export interface Order {
   amount?: number | null;
   currency?: 'USD' | null;
   accessToken?: string | null;
+  /**
+   * Selected Nova Poshta office and automatic electronic waybill status.
+   */
+  novaPoshtaShipping?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1067,6 +1080,7 @@ export interface Transaction {
     postalCode?: string | null;
     country?: string | null;
     phone?: string | null;
+    fatherName?: string | null;
   };
   status: 'pending' | 'succeeded' | 'failed' | 'cancelled' | 'expired' | 'refunded';
   customer?: (number | null) | User;
@@ -1159,6 +1173,7 @@ export interface Address {
     | 'SE'
     | 'CH';
   phone?: string | null;
+  fatherName?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1758,6 +1773,7 @@ export interface AddressesSelect<T extends boolean = true> {
   postalCode?: T;
   country?: T;
   phone?: T;
+  fatherName?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -1899,6 +1915,7 @@ export interface OrdersSelect<T extends boolean = true> {
         postalCode?: T;
         country?: T;
         phone?: T;
+        fatherName?: T;
       };
   customer?: T;
   customerEmail?: T;
@@ -1907,6 +1924,7 @@ export interface OrdersSelect<T extends boolean = true> {
   amount?: T;
   currency?: T;
   accessToken?: T;
+  novaPoshtaShipping?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -1944,6 +1962,7 @@ export interface TransactionsSelect<T extends boolean = true> {
         postalCode?: T;
         country?: T;
         phone?: T;
+        fatherName?: T;
       };
   status?: T;
   customer?: T;

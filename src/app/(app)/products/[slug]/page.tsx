@@ -13,6 +13,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getPayload } from 'payload'
 import React, { Suspense } from 'react'
+import { getProductPrice } from '@/lib/pricing'
 
 type Args = {
   params: Promise<{
@@ -62,8 +63,6 @@ export async function generateMetadata({ params }: Args): Promise<Metadata> {
 export default async function ProductPage({ params }: Args) {
   const { slug } = await params
   const product = await queryProductBySlug({ slug })
-  console.log('product', product)
-
   if (!product) return notFound()
 
   const gallery =
@@ -75,23 +74,14 @@ export default async function ProductPage({ params }: Args) {
       })) || []
 
   const metaImage = typeof product.meta?.image === 'object' ? product.meta?.image : undefined
-  const hasStock = product.enableVariants
-    ? product?.variants?.docs?.some((variant) => {
-        if (typeof variant !== 'object') return false
-        return variant.inventory && variant?.inventory > 0
-      })
-    : product.inventory! > 0
-
-  let price = product.priceInUSD
-
-  if (product.enableVariants && product?.variants?.docs?.length) {
-    price = product?.variants?.docs?.reduce((acc, variant) => {
-      if (typeof variant === 'object' && variant?.priceInUSD && acc && variant?.priceInUSD > acc) {
-        return variant.priceInUSD
-      }
-      return acc
-    }, price)
-  }
+  const variants = product.variants?.filter(
+    (variant): variant is Product => typeof variant === 'object',
+  )
+  const hasStock =
+    product.productType === 'configurable' && variants?.length
+      ? variants.some((variant) => variant.stockStatus !== 'out_stock' && (variant.stock ?? 0) > 0)
+      : product.stockStatus !== 'out_stock' && (product.stock ?? 0) > 0
+  const price = getProductPrice(product)
 
   const productJsonLd = {
     name: product.title,
@@ -103,7 +93,7 @@ export default async function ProductPage({ params }: Args) {
       '@type': 'AggregateOffer',
       availability: hasStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
       price: price,
-      priceCurrency: 'usd',
+      priceCurrency: 'UAH',
     },
   }
 
@@ -170,7 +160,7 @@ function RelatedProducts({ products }: { products: Product[] }) {
             <Link className="relative h-full w-full" href={`/products/${product.slug}`}>
               <GridTileImage
                 label={{
-                  amount: product.priceInUSD!,
+                  amount: getProductPrice(product) ?? 0,
                   title: product.title,
                 }}
                 media={product.meta?.image as Media}
@@ -204,14 +194,6 @@ const queryProductBySlug = async ({ slug }: { slug: string }) => {
         },
         ...(draft ? [] : [{ _status: { equals: 'published' } }]),
       ],
-    },
-    populate: {
-      variants: {
-        title: true,
-        priceInUSD: true,
-        inventory: true,
-        options: true,
-      },
     },
   })
 

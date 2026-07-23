@@ -5,7 +5,7 @@ import { Media } from '@/components/Media'
 import { SpecialPrice } from '@/components/Price'
 import clsx from 'clsx'
 import Link from 'next/link'
-import React from 'react'
+import React, { Suspense } from 'react'
 
 type Props = {
   product: Partial<Product>
@@ -15,8 +15,6 @@ export const ProductGridItem: React.FC<Props> = ({ product }) => {
   const { gallery, price, specialPrice, author, title } = product
 
   const isSimpleProduct = product.productType === 'simple'
-  console.log('product', product)
-
   const image =
     gallery?.[0]?.image && typeof gallery[0]?.image !== 'string' ? gallery[0]?.image : false
 
@@ -49,7 +47,9 @@ export const ProductGridItem: React.FC<Props> = ({ product }) => {
           )}
           <div className="mt-4">
             {isSimpleProduct ? (
-              <AddToCart product={product as Product} showText={false} />
+              <Suspense fallback={null}>
+                <AddToCart product={product as Product} showText={false} />
+              </Suspense>
             ) : (
               <Link href={`/products/${product.slug}`}>Детальніше</Link>
             )}

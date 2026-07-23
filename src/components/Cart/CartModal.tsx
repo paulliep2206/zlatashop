@@ -21,6 +21,7 @@ import { EditItemQuantityButton } from './EditItemQuantityButton'
 import { OpenCartButton } from './OpenCart'
 import { Button } from '@/components/ui/button'
 import { Product } from '@/payload-types'
+import { getProductPrice } from '@/lib/pricing'
 
 export function CartModal() {
   const { cart } = useCart()
@@ -62,7 +63,6 @@ export function CartModal() {
               <ul className="grow overflow-auto py-4">
                 {cart?.items?.map((item, i) => {
                   const product = item.product
-                  const variant = item.variant
 
                   if (typeof product !== 'object' || !item || !product || !product.slug)
                     return <React.Fragment key={i} />
@@ -78,32 +78,7 @@ export function CartModal() {
                       : undefined
 
                   let image = firstGalleryImage || metaImage
-                  let price = product.priceInUSD
-
-                  const isVariant = Boolean(variant) && typeof variant === 'object'
-
-                  if (isVariant) {
-                    price = variant?.priceInUSD
-
-                    const imageVariant = product.gallery?.find((item) => {
-                      if (!item.variantOption) return false
-                      const variantOptionID =
-                        typeof item.variantOption === 'object'
-                          ? item.variantOption.id
-                          : item.variantOption
-
-                      const hasMatch = variant?.options?.some((option) => {
-                        if (typeof option === 'object') return option.id === variantOptionID
-                        else return option === variantOptionID
-                      })
-
-                      return hasMatch
-                    })
-
-                    if (imageVariant && typeof imageVariant.image === 'object') {
-                      image = imageVariant.image
-                    }
-                  }
+                  let price = getProductPrice(product)
 
                   return (
                     <li className="flex w-full flex-col" key={i}>
@@ -129,16 +104,6 @@ export function CartModal() {
 
                           <div className="flex flex-1 flex-col text-base">
                             <span className="leading-tight">{product?.title}</span>
-                            {isVariant && variant ? (
-                              <p className="text-sm text-neutral-500 dark:text-neutral-400 capitalize">
-                                {variant.options
-                                  ?.map((option) => {
-                                    if (typeof option === 'object') return option.label
-                                    return null
-                                  })
-                                  .join(', ')}
-                              </p>
-                            ) : null}
                           </div>
                         </Link>
                         <div className="flex h-16 flex-col justify-between">
@@ -168,7 +133,7 @@ export function CartModal() {
                     <div className="mb-3 flex items-center justify-between border-b border-neutral-200 pb-1 pt-1 dark:border-neutral-700">
                       <p>Total</p>
                       <Price
-                        amount={cart?.subtotal}
+                        amount={cart.subtotal}
                         className="text-right text-base text-black dark:text-white"
                       />
                     </div>

@@ -11,7 +11,7 @@ import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
 import localFont from 'next/font/local'
 import { Yeseva_One } from 'next/font/google'
-import React from 'react'
+import React, { Suspense } from 'react'
 import './globals.css'
 
 const Sundey = localFont({
@@ -43,7 +43,9 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       </head>
       <body>
         <Providers>
-          <Header />
+          <Suspense fallback={null}>
+            <Header />
+          </Suspense>
           <main>{children}</main>
           <Footer />
         </Providers>
