@@ -19,14 +19,12 @@ export function EditItemQuantityButton({ type, item }: { item: CartItem; type: '
           ? item.product
           : null
 
-    if (
-      target &&
-      typeof target === 'object' &&
-      target.inventory !== undefined &&
-      target.inventory !== null
-    ) {
+    if (target && typeof target === 'object') {
+      const availableStock =
+        'stock' in target ? target.stock : 'inventory' in target ? target.inventory : undefined
+
       if (type === 'plus' && item.quantity !== undefined && item.quantity !== null) {
-        return item.quantity >= target.inventory
+        return typeof availableStock === 'number' && item.quantity >= availableStock
       }
     }
 

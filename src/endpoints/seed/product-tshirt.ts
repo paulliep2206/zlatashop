@@ -21,6 +21,10 @@ export const productTshirtData: (
   categories,
 }) => {
   return {
+    sku: 'tshirt',
+    productType: 'configurable',
+    price: 49.99,
+    stockStatus: 'in_stock',
     enableVariants: true,
     variantTypes: variantTypes,
     inventory: 0,

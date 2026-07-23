@@ -14,6 +14,7 @@ import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 import { OrderStatus } from '@/components/OrderStatus'
 import { AddressItem } from '@/components/addresses/AddressItem'
+import type { NovaPoshtaOrderShipping } from '@/integrations/nova-poshta/types'
 
 export const dynamic = 'force-dynamic'
 
@@ -112,6 +113,13 @@ export default async function Order({ params, searchParams }: PageProps) {
     notFound()
   }
 
+  const novaPoshtaShipping =
+    order.novaPoshtaShipping &&
+    typeof order.novaPoshtaShipping === 'object' &&
+    !Array.isArray(order.novaPoshtaShipping)
+      ? (order.novaPoshtaShipping as unknown as NovaPoshtaOrderShipping)
+      : undefined
+
   return (
     <div className="">
       <div className="flex gap-8 justify-between items-center mb-6">
@@ -193,6 +201,22 @@ export default async function Order({ params, searchParams }: PageProps) {
 
             {/* @ts-expect-error - some kind of type hell */}
             <AddressItem address={order.shippingAddress} hideActions />
+          </div>
+        )}
+
+        {novaPoshtaShipping?.delivery?.warehouse && (
+          <div>
+            <h2 className="font-mono text-primary/50 mb-4 uppercase text-sm">
+              Nova Poshta delivery
+            </h2>
+            <p>
+              {novaPoshtaShipping.delivery.warehouse.description},{' '}
+              {novaPoshtaShipping.delivery.warehouse.shortAddress}
+            </p>
+            {novaPoshtaShipping.waybill.status === 'created' &&
+              novaPoshtaShipping.waybill.number && (
+                <p>Waybill: {novaPoshtaShipping.waybill.number}</p>
+              )}
           </div>
         )}
       </div>

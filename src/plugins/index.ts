@@ -16,6 +16,8 @@ import { customerOnlyFieldAccess } from '@/access/customerOnlyFieldAccess'
 import { isAdmin } from '@/access/isAdmin'
 import { isDocumentOwner } from '@/access/isDocumentOwner'
 import { uploadthingStorage } from '@payloadcms/storage-uploadthing'
+import { withNovaPoshta } from '@/integrations/nova-poshta/payment-adapter'
+import { calculateCartSubtotal } from '@/lib/pricing'
 
 const generateTitle: GenerateTitle<Product | Page> = ({ doc }) => {
   return doc?.title ? `${doc.title} | Payload Ecommerce Template` : 'Payload Ecommerce Template'
@@ -88,6 +90,64 @@ export const plugins: Plugin[] = [
     customers: {
       slug: 'users',
     },
+    carts: {
+      cartsCollectionOverride: ({ defaultCollection }) => ({
+        ...defaultCollection,
+        hooks: {
+          ...defaultCollection.hooks,
+          afterRead: [
+            ...(defaultCollection.hooks?.afterRead ?? []),
+            async ({ doc, req }) => {
+              if (!Array.isArray(doc.items)) return doc
+
+              doc.subtotal = await calculateCartSubtotal(doc.items, (id) =>
+                req.payload.findByID({
+                  collection: 'products',
+                  id,
+                  depth: 0,
+                  select: {
+                    price: true,
+                    specialPrice: true,
+                  },
+                }),
+              )
+
+              return doc
+            },
+          ],
+          beforeChange: [
+            ...(defaultCollection.hooks?.beforeChange ?? []),
+            async ({ data, req }) => {
+              if (!Array.isArray(data.items)) return data
+
+              data.subtotal = await calculateCartSubtotal(data.items, (id) =>
+                req.payload.findByID({
+                  collection: 'products',
+                  id,
+                  depth: 0,
+                  select: {
+                    price: true,
+                    specialPrice: true,
+                  },
+                }),
+              )
+
+              return data
+            },
+          ],
+        },
+      }),
+    },
+    addresses: {
+      addressFields: ({ defaultFields }) => [
+        ...defaultFields,
+        {
+          name: 'fatherName',
+          type: 'text',
+          label: 'Father name',
+        },
+      ],
+    },
     orders: {
       ordersCollectionOverride: ({ defaultCollection }) => ({
         ...defaultCollection,
@@ -113,20 +173,34 @@ export const plugins: Plugin[] = [
               ],
             },
           },
+          {
+            name: 'novaPoshtaShipping',
+            type: 'json',
+            admin: {
+              description: 'Selected Nova Poshta office and automatic electronic waybill status.',
+              readOnly: true,
+            },
+            label: 'Nova Poshta shipping',
+          },
         ],
       }),
     },
     payments: {
       paymentMethods: [
-        stripeAdapter({
-          secretKey: process.env.STRIPE_SECRET_KEY!,
-          publishableKey: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!,
-          webhookSecret: process.env.STRIPE_WEBHOOKS_SIGNING_SECRET!,
+        withNovaPoshta({
+          baseAdapter: stripeAdapter({
+            secretKey: process.env.STRIPE_SECRET_KEY!,
+            publishableKey: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!,
+            webhookSecret: process.env.STRIPE_WEBHOOKS_SIGNING_SECRET!,
+          }),
         }),
       ],
     },
     products: {
       productsCollectionOverride: ProductsCollection,
+      // The cart hooks above validate and calculate from the custom UAH price fields.
+      // Payload's default validator only understands generated priceIn{currency} fields.
+      validation: () => undefined,
     },
   }),
   uploadthingStorage({

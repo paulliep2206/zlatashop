@@ -24,6 +24,7 @@ type AddressFormValues = {
   title?: string | null
   firstName?: string | null
   lastName?: string | null
+  fatherName?: string | null
   company?: string | null
   addressLine1?: string | null
   addressLine2?: string | null
@@ -127,11 +128,21 @@ export const AddressForm: React.FC<Props> = ({
             />
             {errors.lastName && <FormError message={errors.lastName.message} />}
           </FormItem>
+          <FormItem>
+            <Label htmlFor="fatherName">Father name</Label>
+            <Input id="fatherName" {...register('fatherName')} />
+            {errors.fatherName && <FormError message={errors.fatherName.message} />}
+          </FormItem>
         </div>
 
         <FormItem>
-          <Label htmlFor="phone">Phone</Label>
-          <Input type="tel" id="phone" autoComplete="mobile tel" {...register('phone')} />
+          <Label htmlFor="phone">Phone*</Label>
+          <Input
+            type="tel"
+            id="phone"
+            autoComplete="tel"
+            {...register('phone', { required: 'Phone number is required.' })}
+          />
           {errors.phone && <FormError message={errors.phone.message} />}
         </FormItem>
 
