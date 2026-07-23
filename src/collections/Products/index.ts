@@ -1,7 +1,7 @@
 import { CallToAction } from '@/blocks/CallToAction/config'
 import { Content } from '@/blocks/Content/config'
 import { MediaBlock } from '@/blocks/MediaBlock/config'
-import { slugField } from 'payload'
+import { ImageText } from '@/blocks/ImageText/config'
 import { generatePreviewPath } from '@/utilities/generatePreviewPath'
 import { CollectionOverride } from '@payloadcms/plugin-ecommerce/types'
 import {
@@ -18,7 +18,7 @@ import {
   InlineToolbarFeature,
   lexicalEditor,
 } from '@payloadcms/richtext-lexical'
-import { DefaultDocumentIDType, Where } from 'payload'
+import { DefaultDocumentIDType, slugField, Where } from 'payload'
 
 export const ProductsCollection: CollectionOverride = ({ defaultCollection }) => ({
   ...defaultCollection,
@@ -55,11 +55,113 @@ export const ProductsCollection: CollectionOverride = ({ defaultCollection }) =>
   },
   fields: [
     { name: 'title', type: 'text', required: true },
+    { name: 'author', type: 'text', required: false },
+    { name: 'sku', type: 'text', required: true, unique: true },
+
+    // --- 1. PRODUCT TYPE FIELD ---
+    {
+      name: 'productType',
+      type: 'select',
+      required: true,
+      defaultValue: 'simple',
+      options: [
+        { label: 'Simple (Physical Book)', value: 'simple' },
+        { label: 'Configurable (Has Variants)', value: 'configurable' },
+        { label: 'Virtual (E-Book)', value: 'virtual' },
+      ],
+    },
+    // --- VARIANT RELATIONSHIP ---
+    // This field appears ONLY if the type is Configurable.
+    // It lets you link multiple "Simple" products as variants.
+    {
+      name: 'variants',
+      type: 'relationship',
+      relationTo: 'products', // References its own collection!
+      hasMany: true,
+      admin: {
+        condition: (data) => data?.productType === 'configurable',
+        description: 'Attach the Simple products that act as variants for this book.',
+      },
+      // Optional: Filter the selection dropdown to only show "simple" products
+      filterOptions: {
+        productType: {
+          equals: 'simple',
+        },
+      },
+    },
+    // --- PRICING FIELDS (With Special Price) ---
+    {
+      type: 'row', // Places fields side-by-side in the admin panel
+      fields: [
+        {
+          name: 'price',
+          type: 'number',
+          required: true,
+          admin: { description: 'Base price in UAH' },
+        },
+        {
+          name: 'specialPrice',
+          type: 'number',
+          admin: { description: 'Promotional sale price in UAH (Optional)' },
+        },
+      ],
+    },
+
+    // --- 3. STOCK STATUS FIELD ---
+    {
+      name: 'stockStatus',
+      type: 'select',
+      required: true,
+      defaultValue: 'in_stock',
+      options: [
+        { label: 'Є в наявності', value: 'in_stock' },
+        { label: 'Немає в наявності', value: 'out_stock' },
+        { label: 'Попереднє замовлення', value: 'presell' },
+      ],
+    },
+    {
+      name: 'stock',
+      type: 'number',
+      required: true,
+      defaultValue: 0,
+      admin: {
+        // No need to track exact stock quantities for virtual products
+        condition: (data) => data?.productType !== 'virtual',
+      },
+    },
+
+    // --- 2. ASSIGNABLE ATTRIBUTES (e.g., Bookcover) ---
+    {
+      name: 'attributes',
+      type: 'relationship',
+      relationTo: 'attributes',
+      hasMany: true,
+      admin: {
+        description: 'Select global book attributes (e.g., Cover Type, Language)',
+      },
+    },
     {
       type: 'tabs',
       tabs: [
         {
           fields: [
+            {
+              name: 'short-description',
+              type: 'richText',
+              editor: lexicalEditor({
+                features: ({ rootFeatures }) => {
+                  return [
+                    ...rootFeatures,
+                    HeadingFeature({ enabledHeadingSizes: ['h1', 'h2', 'h3', 'h4'] }),
+                    FixedToolbarFeature(),
+                    InlineToolbarFeature(),
+                    HorizontalRuleFeature(),
+                  ]
+                },
+              }),
+              label: 'Short Description',
+              required: false,
+            },
             {
               name: 'description',
               type: 'richText',
@@ -74,7 +176,7 @@ export const ProductsCollection: CollectionOverride = ({ defaultCollection }) =>
                   ]
                 },
               }),
-              label: false,
+              label: 'Description',
               required: false,
             },
             {
@@ -135,14 +237,13 @@ export const ProductsCollection: CollectionOverride = ({ defaultCollection }) =>
             {
               name: 'layout',
               type: 'blocks',
-              blocks: [CallToAction, Content, MediaBlock],
+              blocks: [CallToAction, Content, MediaBlock, ImageText],
             },
           ],
           label: 'Content',
         },
         {
           fields: [
-            ...defaultCollection.fields,
             {
               name: 'relatedProducts',
               type: 'relationship',
@@ -166,7 +267,7 @@ export const ProductsCollection: CollectionOverride = ({ defaultCollection }) =>
               relationTo: 'products',
             },
           ],
-          label: 'Product Details',
+          label: 'Related Products',
         },
         {
           name: 'meta',

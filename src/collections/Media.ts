@@ -41,6 +41,16 @@ export const Media: CollectionConfig = {
     },
   ],
   upload: {
-    staticDir: path.resolve(dirname, '../../public/media'),
+    staticDir: 'media',
+    mimeTypes: ['image/*'],
+    // ─── ADD / UPDATE THIS DYNAMIC THUMBNAIL FUNCTION ───
+    adminThumbnail: ({ doc }) => {
+      // If the document has a direct cloud URL from Uploadthing, use it instantly
+      if (doc && doc.url) {
+        return doc.url as string
+      }
+      // Local development fallback path
+      return `/api/media/file/${doc.filename}`
+    },
   },
 }

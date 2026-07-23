@@ -5,14 +5,17 @@ import type { Product, Variant } from '@/payload-types'
 
 import { useCart } from '@payloadcms/plugin-ecommerce/client/react'
 import clsx from 'clsx'
+import { ShoppingCart } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
 import React, { useCallback, useMemo } from 'react'
 import { toast } from 'sonner'
 type Props = {
   product: Product
+  showText?: boolean
+  className?: string
 }
 
-export function AddToCart({ product }: Props) {
+export function AddToCart({ product, showText = true, className }: Props) {
   const { addItem, cart, isLoading } = useCart()
   const searchParams = useSearchParams()
 
@@ -97,15 +100,22 @@ export function AddToCart({ product }: Props) {
   return (
     <Button
       aria-label="Add to cart"
-      variant={'outline'}
-      className={clsx({
-        'hover:opacity-90': true,
-      })}
+      variant={'default'}
+      size={showText ? 'default' : 'icon'}
+      className={clsx(
+        {
+          'hover:opacity-90': true,
+          'rounded-0 size-10': !showText,
+        },
+        className,
+      )}
       disabled={disabled || isLoading}
       onClick={addToCart}
       type="submit"
+      title="Add to cart"
     >
-      Add To Cart
+      <ShoppingCart className={showText ? 'size-4' : 'size-5'} />
+      {showText ? 'Додати в кошик' : null}
     </Button>
   )
 }

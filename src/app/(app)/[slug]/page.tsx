@@ -1,13 +1,12 @@
 import type { Metadata } from 'next'
 
 import { RenderBlocks } from '@/blocks/RenderBlocks'
-import { RenderHero } from '@/heros/RenderHero'
+import { HeroBanner } from '@/components/HeroBanner'
+import { homeStaticData } from '@/endpoints/seed/home-static'
 import { generateMeta } from '@/utilities/generateMeta'
 import configPromise from '@payload-config'
-import { getPayload } from 'payload'
 import { draftMode } from 'next/headers'
-import { homeStaticData } from '@/endpoints/seed/home-static'
-import React from 'react'
+import { getPayload } from 'payload'
 
 import type { Page } from '@/payload-types'
 import { notFound } from 'next/navigation'
@@ -62,8 +61,11 @@ export default async function Page({ params }: Args) {
   const { hero, layout } = page
 
   return (
-    <article className="pt-16 pb-24">
-      <RenderHero {...hero} />
+    <article>
+      <HeroBanner data={page['hero-banner']} />
+      {slug !== 'home' && page.title && (
+        <h1 className="container mb-8 mt-16 text-3xl font-bold md:text-4xl">{page.title}</h1>
+      )}
       <RenderBlocks blocks={layout} />
     </article>
   )

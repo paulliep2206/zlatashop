@@ -33,20 +33,22 @@ export const StockIndicator: React.FC<Props> = ({ product }) => {
   const stockQuantity = useMemo(() => {
     if (product.enableVariants) {
       if (selectedVariant) {
-        return selectedVariant.inventory || 0
+        return selectedVariant.stock || 0
       }
     }
-    return product.inventory || 0
+    return product.stock || 0
   }, [product.enableVariants, selectedVariant, product.inventory])
 
   if (product.enableVariants && !selectedVariant) {
     return null
   }
 
+  console.log(product)
+
   return (
     <div className="uppercase font-mono text-sm font-medium text-gray-500">
-      {stockQuantity < 10 && stockQuantity > 0 && <p>Only {stockQuantity} left in stock</p>}
-      {(stockQuantity === 0 || !stockQuantity) && <p>Out of stock</p>}
+      {stockQuantity < 10 && stockQuantity > 0 && <p>Залишилося {stockQuantity} екземплярів</p>}
+      {(stockQuantity === 0 || !stockQuantity) && <p>Немає в наявності</p>}
     </div>
   )
 }

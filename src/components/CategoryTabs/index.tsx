@@ -1,6 +1,6 @@
 import configPromise from '@payload-config'
-import { getPayload } from 'payload'
 import clsx from 'clsx'
+import { getPayload } from 'payload'
 import React, { Suspense } from 'react'
 
 import { Item } from './Item'
@@ -18,7 +18,7 @@ async function List() {
 
   const categories = categoriesData.docs?.map((category) => {
     return {
-      href: `/shop/${category.slug}`,
+      href: `/category/${category.slug}`,
       title: category.title,
     }
   })

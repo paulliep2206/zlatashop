@@ -45,6 +45,8 @@
   --breakpoint-2xl: 86rem;
   --font-mono: var(--font-geist-mono);
   --font-sans: var(--font-geist-sans);
+  --font-logo: var(--font-sundey);
+  --font-heading: var(--font-yeseva);
 }
 
 @layer utilities {
@@ -126,7 +128,7 @@
 }
 
 [data-theme='dark'] {
-  --background: oklch(14.5% 0 0deg);
+  --background: oklch(0.263 0.0167 259.78);
   --foreground: oklch(98.5% 0 0deg);
   --card: oklch(17% 0 0deg);
   --card-foreground: oklch(98.5% 0 0deg);
@@ -227,4 +229,8 @@ a,
 input,
 button {
   @apply focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-neutral-400 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-50 dark:focus-visible:ring-neutral-600 dark:focus-visible:ring-offset-neutral-900;
+}
+
+h1, h2, h3, h4, h5 {
+  @apply font-heading;
 }

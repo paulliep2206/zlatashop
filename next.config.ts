@@ -29,8 +29,12 @@ const nextConfig: NextConfig = {
         return {
           hostname: url.hostname,
           protocol: url.protocol.replace(':', '') as 'http' | 'https',
+          ...(url.port ? { port: url.port } : {}),
         }
       }),
+      // UploadThing CDN – used when @payloadcms/storage-uploadthing is active
+      { hostname: 'utfs.io', protocol: 'https' },
+      { hostname: 'uploadthing.com', protocol: 'https' },
     ],
   },
   reactStrictMode: true,

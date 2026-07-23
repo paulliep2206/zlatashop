@@ -541,31 +541,22 @@ export const seed = async ({
           {
             link: {
               type: 'custom',
-              label: 'Admin',
-              url: '/admin',
+              label: 'Магазин',
+              url: '/shop',
             },
           },
           {
             link: {
               type: 'custom',
-              label: 'Find my order',
+              label: 'Особистий кабінет',
+              url: '/account',
+            },
+          },
+          {
+            link: {
+              type: 'custom',
+              label: 'Знайти замовлення',
               url: '/find-order',
-            },
-          },
-          {
-            link: {
-              type: 'custom',
-              label: 'Source Code',
-              newTab: true,
-              url: 'https://github.com/payloadcms/payload/tree/3.x/templates/website',
-            },
-          },
-          {
-            link: {
-              type: 'custom',
-              label: 'Payload',
-              newTab: true,
-              url: 'https://payloadcms.com/',
             },
           },
         ],

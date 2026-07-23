@@ -9,11 +9,34 @@ import { LogoIcon } from '@/components/icons/logo'
 
 const { COMPANY_NAME, SITE_NAME } = process.env
 
+const defaultFooterLinks: NonNullable<Footer['navItems']> = [
+  {
+    link: {
+      type: 'custom',
+      label: 'Магазин',
+      url: '/shop',
+    },
+  },
+  {
+    link: {
+      type: 'custom',
+      label: 'Особистий кабінет',
+      url: '/account',
+    },
+  },
+  {
+    link: {
+      type: 'custom',
+      label: 'Знайти замовлення',
+      url: '/find-order',
+    },
+  },
+]
+
 export async function Footer() {
   const footer: Footer = await getCachedGlobal('footer', 1)()
-  const menu = footer.navItems || []
+  const menu = footer.navItems?.length ? footer.navItems : defaultFooterLinks
   const currentYear = new Date().getFullYear()
-  const copyrightDate = 2023 + (currentYear > 2023 ? `-${currentYear}` : '')
   const skeleton = 'w-full h-6 animate-pulse rounded bg-neutral-200 dark:bg-neutral-700'
 
   const copyrightName = COMPANY_NAME || SITE_NAME || ''
@@ -50,15 +73,8 @@ export async function Footer() {
       <div className="border-t border-neutral-200 py-6 text-sm dark:border-neutral-700">
         <div className="container mx-auto flex w-full flex-col items-center gap-1 md:flex-row md:gap-0">
           <p>
-            &copy; {copyrightDate} {copyrightName}
-            {copyrightName.length && !copyrightName.endsWith('.') ? '.' : ''} All rights reserved.
-          </p>
-          <hr className="mx-4 hidden h-4 w-px border-l border-neutral-400 md:inline-block" />
-          <p>Designed in Michigan</p>
-          <p className="md:ml-auto">
-            <a className="text-black dark:text-white" href="https://payloadcms.com">
-              Crafted by Payload
-            </a>
+            &copy; {currentYear} {copyrightName}
+            {copyrightName.length && !copyrightName.endsWith('.') ? '.' : ''} Всі права захищено.
           </p>
         </div>
       </div>

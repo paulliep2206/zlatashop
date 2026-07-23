@@ -104,6 +104,8 @@ export default {
       fontFamily: {
         mono: ['var(--font-geist-mono)'],
         sans: ['var(--font-geist-sans)'],
+        logo: ['var(--font-sundey)'],
+        heading: ['var(--font-yeseva)'],
       },
       keyframes: {
         fadeIn: {

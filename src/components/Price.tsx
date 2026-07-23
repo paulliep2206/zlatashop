@@ -1,6 +1,6 @@
 'use client'
-import { useCurrency } from '@payloadcms/plugin-ecommerce/client/react'
-import React, { useMemo } from 'react'
+import { cn } from '@/utilities/cn'
+import React from 'react'
 
 type BaseProps = {
   className?: string
@@ -24,6 +24,24 @@ type PriceRange = {
 
 type Props = BaseProps & (PriceFixed | PriceRange)
 
+type SpecialPriceProps = BaseProps & {
+  price: number
+  specialPrice?: number
+  currencyCode?: string
+  as?: 'span' | 'p'
+}
+
+const formatUah = (value?: number | null) => {
+  if (typeof value !== 'number' || Number.isNaN(value)) {
+    return ''
+  }
+
+  return `${new Intl.NumberFormat('uk-UA', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(value)} грн`
+}
+
 export const Price = ({
   amount,
   className,
@@ -32,21 +50,12 @@ export const Price = ({
   currencyCode: currencyCodeFromProps,
   as = 'p',
 }: Props & React.ComponentProps<'p'>) => {
-  const { formatCurrency, supportedCurrencies } = useCurrency()
-
   const Element = as
-
-  const currencyToUse = useMemo(() => {
-    if (currencyCodeFromProps) {
-      return supportedCurrencies.find((currency) => currency.code === currencyCodeFromProps)
-    }
-    return undefined
-  }, [currencyCodeFromProps, supportedCurrencies])
 
   if (typeof amount === 'number') {
     return (
       <Element className={className} suppressHydrationWarning>
-        {formatCurrency(amount, { currency: currencyToUse })}
+        {formatUah(amount)}
       </Element>
     )
   }
@@ -54,7 +63,7 @@ export const Price = ({
   if (highestAmount && highestAmount !== lowestAmount) {
     return (
       <Element className={className} suppressHydrationWarning>
-        {`${formatCurrency(lowestAmount, { currency: currencyToUse })} - ${formatCurrency(highestAmount, { currency: currencyToUse })}`}
+        {`${formatUah(lowestAmount)} - ${formatUah(highestAmount)}`}
       </Element>
     )
   }
@@ -62,10 +71,40 @@ export const Price = ({
   if (lowestAmount) {
     return (
       <Element className={className} suppressHydrationWarning>
-        {`${formatCurrency(lowestAmount, { currency: currencyToUse })}`}
+        {formatUah(lowestAmount)}
       </Element>
     )
   }
 
   return null
+}
+
+export const SpecialPrice = ({
+  price,
+  specialPrice,
+  className,
+  currencyCode: currencyCodeFromProps,
+  as = 'p',
+}: SpecialPriceProps & React.ComponentProps<'p'>) => {
+  const Element = as
+
+  const formattedPrice = formatUah(price)
+  const formattedSpecialPrice = specialPrice ? formatUah(specialPrice) : null
+
+  if (formattedSpecialPrice) {
+    return (
+      <Element className={className} suppressHydrationWarning>
+        <span className="block font-semibold">{formattedSpecialPrice}</span>
+        <span className="mt-1 block text-sm font-medium text-muted-foreground line-through">
+          {formattedPrice}
+        </span>
+      </Element>
+    )
+  }
+
+  return (
+    <Element className={cn('font-semibold', className)} suppressHydrationWarning>
+      {formattedPrice}
+    </Element>
+  )
 }

@@ -7,7 +7,7 @@ import Link from 'next/link'
 import React from 'react'
 import { GridTileImage } from '@/components/Grid/tile'
 
-export const CarouselClient: React.FC<{ products: Product[] }> = async ({ products }) => {
+export const CarouselClient: React.FC<{ products: Product[] }> = ({ products }) => {
   if (!products?.length) return null
 
   // Purposefully duplicating products to make the carousel loop and not run out of products on wide screens.
@@ -15,8 +15,8 @@ export const CarouselClient: React.FC<{ products: Product[] }> = async ({ produc
 
   return (
     <Carousel
-      className="w-full"
-      opts={{ align: 'start', loop: true }}
+      className="w-full container"
+      opts={{ align: 'start', loop: false }}
       plugins={[
         AutoScroll({
           playOnInit: true,
@@ -29,17 +29,20 @@ export const CarouselClient: React.FC<{ products: Product[] }> = async ({ produc
       <CarouselContent>
         {carouselProducts.map((product, i) => (
           <CarouselItem
-            className="relative aspect-square h-[30vh] max-h-[275px] w-2/3 max-w-[475px] flex-none md:w-1/3"
+            className="relative aspect-square w-2/3 max-w-[475px] flex-none md:w-1/3"
             key={`${product.slug}${i}`}
           >
-            <Link className="relative h-full w-full" href={`/products/${product.slug}`}>
-              <GridTileImage
-                label={{
-                  amount: product.priceInUSD!,
-                  title: product.title,
-                }}
-                media={product.meta?.image as Media}
-              />
+            <Link className="relative h-full w-full " href={`/products/${product.slug}`}>
+              <div className="border border-white">
+                <GridTileImage
+                  label={{
+                    amount: product.priceInUSD!,
+                    title: product.title,
+                  }}
+                  media={product.meta?.image as Media}
+                />
+                <div className="font-heading mt-4 uppercase  p-4">{product.title}</div>
+              </div>
             </Link>
           </CarouselItem>
         ))}

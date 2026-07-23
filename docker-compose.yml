@@ -1,0 +1,15 @@
+version: '3.8'
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ua_bookstore_db
+    environment:
+      POSTGRES_USER: bookstore_admin
+      POSTGRES_PASSWORD: secret_local_password
+      POSTGRES_DB: bookstore_dev
+    ports:
+      - "5432:5432"
+    volumes:
+    - pgdata:/var/lib/postgresql/data
+volumes:
+  pgdata:
