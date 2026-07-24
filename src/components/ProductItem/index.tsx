@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Media as MediaType, Order, Product, Variant } from '@/payload-types'
 import { formatDateTime } from '@/utilities/formatDateTime'
 import Link from 'next/link'
+import { getProductPrice } from '@/lib/pricing'
 
 type Props = {
   product: Product
@@ -55,7 +56,7 @@ export const ProductItem: React.FC<Props> = ({
     }
   }
 
-  const itemPrice = variant?.priceInUSD || product.priceInUSD
+  const itemPrice = getProductPrice(product)
   const itemURL = `/products/${product.slug}${variant ? `?variant=${variant.id}` : ''}`
 
   return (

@@ -1,5 +1,5 @@
 'use client'
-import { Product, Variant } from '@/payload-types'
+import { Product } from '@/payload-types'
 import { useSearchParams } from 'next/navigation'
 import { useMemo } from 'react'
 
@@ -10,10 +10,11 @@ type Props = {
 export const StockIndicator: React.FC<Props> = ({ product }) => {
   const searchParams = useSearchParams()
 
-  const variants = product.variants?.docs || []
+  const variants = product.variants || []
+  const hasVariants = product.productType === 'configurable' && variants.length > 0
 
-  const selectedVariant = useMemo<Variant | undefined>(() => {
-    if (product.enableVariants && variants.length) {
+  const selectedVariant = useMemo<Product | undefined>(() => {
+    if (hasVariants) {
       const variantId = searchParams.get('variant')
       const validVariant = variants.find((variant) => {
         if (typeof variant === 'object') {
@@ -28,22 +29,20 @@ export const StockIndicator: React.FC<Props> = ({ product }) => {
     }
 
     return undefined
-  }, [product.enableVariants, searchParams, variants])
+  }, [hasVariants, searchParams, variants])
 
   const stockQuantity = useMemo(() => {
-    if (product.enableVariants) {
+    if (hasVariants) {
       if (selectedVariant) {
         return selectedVariant.stock || 0
       }
     }
     return product.stock || 0
-  }, [product.enableVariants, selectedVariant, product.inventory])
+  }, [hasVariants, selectedVariant, product.stock])
 
-  if (product.enableVariants && !selectedVariant) {
+  if (hasVariants && !selectedVariant) {
     return null
   }
-
-  console.log(product)
 
   return (
     <div className="uppercase font-mono text-sm font-medium text-gray-500">

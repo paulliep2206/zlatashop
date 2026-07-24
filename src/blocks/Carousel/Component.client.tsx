@@ -6,6 +6,7 @@ import AutoScroll from 'embla-carousel-auto-scroll'
 import Link from 'next/link'
 import React from 'react'
 import { GridTileImage } from '@/components/Grid/tile'
+import { getProductPrice } from '@/lib/pricing'
 
 export const CarouselClient: React.FC<{ products: Product[] }> = ({ products }) => {
   if (!products?.length) return null
@@ -36,7 +37,7 @@ export const CarouselClient: React.FC<{ products: Product[] }> = ({ products }) 
               <div className="border border-white">
                 <GridTileImage
                   label={{
-                    amount: product.priceInUSD!,
+                    amount: getProductPrice(product) ?? 0,
                     title: product.title,
                   }}
                   media={product.meta?.image as Media}
