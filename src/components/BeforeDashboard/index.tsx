@@ -24,17 +24,17 @@ export const BeforeDashboard: React.FC = () => {
         <li>
           {'Head over to '}
           <a
-            href="https://dashboard.stripe.com/test/apikeys"
+            href="https://www.liqpay.ua/"
             rel="noopener noreferrer"
             target="_blank"
           >
-            Stripe to obtain your API Keys
+            LiqPay to obtain your API keys
           </a>
           {
             '. Create a new account if needed, then copy them into your environment variables and restart your server. See the '
           }
           <a
-            href="https://github.com/payloadcms/payload/blob/3.x/templates/ecommerce/README.md#stripe"
+            href="https://www.liqpay.ua/doc/api/internet_acquiring/checkout"
             rel="noopener noreferrer"
             target="_blank"
           >

@@ -356,12 +356,12 @@ export const seed = async ({
   const pendingTransaction = await payload.create({
     collection: 'transactions',
     data: {
-      currency: 'USD',
+      currency: 'UAH',
       customer: customer.id,
-      paymentMethod: 'stripe',
-      stripe: {
-        customerID: 'cus_123',
-        paymentIntentID: 'pi_123',
+      paymentMethod: 'liqpay',
+      liqpay: {
+        merchantOrderID: 'seed-pending-payment',
+        finalizationState: 'pending',
       },
       status: 'pending',
       billingAddress: baseAddressUSData,
@@ -371,12 +371,12 @@ export const seed = async ({
   const succeededTransaction = await payload.create({
     collection: 'transactions',
     data: {
-      currency: 'USD',
+      currency: 'UAH',
       customer: customer.id,
-      paymentMethod: 'stripe',
-      stripe: {
-        customerID: 'cus_123',
-        paymentIntentID: 'pi_123',
+      paymentMethod: 'liqpay',
+      liqpay: {
+        merchantOrderID: 'seed-succeeded-payment',
+        finalizationState: 'finalized',
       },
       status: 'succeeded',
       billingAddress: baseAddressUSData,
@@ -396,7 +396,7 @@ export const seed = async ({
     collection: 'carts',
     data: {
       customer: customer.id,
-      currency: 'USD',
+      currency: 'UAH',
       items: [
         {
           product: productTshirt.id,
@@ -413,7 +413,7 @@ export const seed = async ({
   const abandonedCart = await payload.create({
     collection: 'carts',
     data: {
-      currency: 'USD',
+      currency: 'UAH',
       createdAt: oldTimestamp,
       items: [
         {
@@ -429,7 +429,7 @@ export const seed = async ({
     collection: 'carts',
     data: {
       customer: customer.id,
-      currency: 'USD',
+      currency: 'UAH',
       purchasedAt: new Date().toISOString(),
       subtotal: 7499,
       items: [
@@ -459,7 +459,7 @@ export const seed = async ({
     collection: 'orders',
     data: {
       amount: 7499,
-      currency: 'USD',
+      currency: 'UAH',
       customer: customer.id,
       shippingAddress: baseAddressUSData,
       items: [
@@ -483,7 +483,7 @@ export const seed = async ({
     collection: 'orders',
     data: {
       amount: 7499,
-      currency: 'USD',
+      currency: 'UAH',
       customer: customer.id,
       shippingAddress: baseAddressUSData,
       items: [

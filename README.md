@@ -24,7 +24,7 @@ Core features:
 - [Carts](#carts)
 - [Guest checkout](#guests)
 - [Orders & Transactions](#orders-and-transactions)
-- [Stripe Payments](#stripe)
+- [LiqPay Payments](#liqpay)
 - [Currencies](#currencies)
 - [Automated Tests](#tests)
 
@@ -199,11 +199,17 @@ This email verification flow prevents unauthorized access to order details. The 
 
 ## Currencies
 
-By default the template ships with support only for USD however you can change the supported currencies via the [plugin configuration](https://payloadcms.com/docs/ecommerce/plugin#currencies). You will need to ensure that the supported currencies in Payload are also configured in your Payment platforms.
+The storefront and Payload Ecommerce configuration use UAH with two decimal places.
 
-## Stripe
+## LiqPay
 
-By default we ship with the Stripe adapter configured, so you'll need to setup the `secretKey`, `publishableKey` and `webhookSecret` from your Stripe dashboard. Follow [Stripe's guide](https://docs.stripe.com/get-started/api-request?locale=en-GB) on how to set this up.
+Checkout uses LiqPay Hosted Checkout. Configure `LIQPAY_PUBLIC_KEY`,
+`LIQPAY_PRIVATE_KEY`, `LIQPAY_API_VERSION`, `LIQPAY_HASH_ALGORITHM`, and
+`NEXT_PUBLIC_SERVER_URL`. Immediate methods are controlled by
+`LIQPAY_ALLOWED_PAYTYPES`; cash and invoice payments are intentionally excluded.
+
+The current LiqPay v7 documentation specifies `sha3-256`. Verify the configured signing
+algorithm with sandbox keys before enabling production payments.
 
 ## Tests
 
@@ -255,7 +261,7 @@ Core features:
 - SEO
 - Search
 - Live preview
-- Stripe payments
+- LiqPay payments
 
 ### Cache
 

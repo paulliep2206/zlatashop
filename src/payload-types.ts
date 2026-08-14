@@ -96,7 +96,6 @@ export interface Config {
     users: {
       orders: 'orders';
       cart: 'carts';
-      addresses: 'addresses';
     };
     variantTypes: {
       options: 'variantOptions';
@@ -197,11 +196,6 @@ export interface User {
     hasNextPage?: boolean;
     totalDocs?: number;
   };
-  addresses?: {
-    docs?: (number | Address)[];
-    hasNextPage?: boolean;
-    totalDocs?: number;
-  };
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -235,6 +229,7 @@ export interface Order {
         id?: string | null;
       }[]
     | null;
+  customerEmail?: string | null;
   shippingAddress?: {
     title?: string | null;
     firstName?: string | null;
@@ -248,13 +243,21 @@ export interface Order {
     country?: string | null;
     phone?: string | null;
     fatherName?: string | null;
+    novaPoshtaDelivery?:
+      | {
+          [k: string]: unknown;
+        }
+      | unknown[]
+      | string
+      | number
+      | boolean
+      | null;
   };
   customer?: (number | null) | User;
-  customerEmail?: string | null;
   transactions?: (number | Transaction)[] | null;
   status?: OrderStatus;
   amount?: number | null;
-  currency?: 'USD' | null;
+  currency?: 'UAH' | null;
   accessToken?: string | null;
   /**
    * Selected Nova Poshta office and automatic electronic waybill status.
@@ -1042,8 +1045,8 @@ export interface Variant {
   product: number | Product;
   options: (number | VariantOption)[];
   inventory?: number | null;
-  priceInUSDEnabled?: boolean | null;
-  priceInUSD?: number | null;
+  priceInUAHEnabled?: boolean | null;
+  priceInUAH?: number | null;
   updatedAt: string;
   createdAt: string;
   deletedAt?: string | null;
@@ -1063,10 +1066,55 @@ export interface Transaction {
         id?: string | null;
       }[]
     | null;
-  paymentMethod?: 'stripe' | null;
-  stripe?: {
-    customerID?: string | null;
-    paymentIntentID?: string | null;
+  paymentMethod?: ('liqpay' | 'bankTransfer') | null;
+  liqpay?: {
+    merchantOrderID?: string | null;
+    paymentID?: string | null;
+    liqpayOrderID?: string | null;
+    paytype?: string | null;
+    providerStatus?: string | null;
+    lastCallbackAt?: string | null;
+    finalizationState: 'pending' | 'finalizing' | 'finalized' | 'failed';
+    shippingAddress?:
+      | {
+          [k: string]: unknown;
+        }
+      | unknown[]
+      | string
+      | number
+      | boolean
+      | null;
+    novaPoshtaDelivery?:
+      | {
+          [k: string]: unknown;
+        }
+      | unknown[]
+      | string
+      | number
+      | boolean
+      | null;
+  };
+  bankTransfer?: {
+    referenceID?: string | null;
+    finalizationState: 'pending' | 'finalizing' | 'finalized';
+    shippingAddress?:
+      | {
+          [k: string]: unknown;
+        }
+      | unknown[]
+      | string
+      | number
+      | boolean
+      | null;
+    novaPoshtaDelivery?:
+      | {
+          [k: string]: unknown;
+        }
+      | unknown[]
+      | string
+      | number
+      | boolean
+      | null;
   };
   billingAddress?: {
     title?: string | null;
@@ -1081,6 +1129,15 @@ export interface Transaction {
     country?: string | null;
     phone?: string | null;
     fatherName?: string | null;
+    novaPoshtaDelivery?:
+      | {
+          [k: string]: unknown;
+        }
+      | unknown[]
+      | string
+      | number
+      | boolean
+      | null;
   };
   status: 'pending' | 'succeeded' | 'failed' | 'cancelled' | 'expired' | 'refunded';
   customer?: (number | null) | User;
@@ -1088,7 +1145,7 @@ export interface Transaction {
   order?: (number | null) | Order;
   cart?: (number | null) | Cart;
   amount?: number | null;
-  currency?: 'USD' | null;
+  currency?: 'UAH' | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1111,7 +1168,24 @@ export interface Cart {
   purchasedAt?: string | null;
   status?: ('active' | 'purchased' | 'abandoned') | null;
   subtotal?: number | null;
-  currency?: 'USD' | null;
+  currency?: 'UAH' | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "form-submissions".
+ */
+export interface FormSubmission {
+  id: number;
+  form: number | Form;
+  submissionData?:
+    | {
+        field: string;
+        value: string;
+        id?: string | null;
+      }[]
+    | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1174,22 +1248,14 @@ export interface Address {
     | 'CH';
   phone?: string | null;
   fatherName?: string | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "form-submissions".
- */
-export interface FormSubmission {
-  id: number;
-  form: number | Form;
-  submissionData?:
+  novaPoshtaDelivery?:
     | {
-        field: string;
-        value: string;
-        id?: string | null;
-      }[]
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
     | null;
   updatedAt: string;
   createdAt: string;
@@ -1329,7 +1395,6 @@ export interface UsersSelect<T extends boolean = true> {
   roles?: T;
   orders?: T;
   cart?: T;
-  addresses?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -1774,6 +1839,7 @@ export interface AddressesSelect<T extends boolean = true> {
   country?: T;
   phone?: T;
   fatherName?: T;
+  novaPoshtaDelivery?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -1786,8 +1852,8 @@ export interface VariantsSelect<T extends boolean = true> {
   product?: T;
   options?: T;
   inventory?: T;
-  priceInUSDEnabled?: T;
-  priceInUSD?: T;
+  priceInUAHEnabled?: T;
+  priceInUAH?: T;
   updatedAt?: T;
   createdAt?: T;
   deletedAt?: T;
@@ -1901,6 +1967,7 @@ export interface OrdersSelect<T extends boolean = true> {
         quantity?: T;
         id?: T;
       };
+  customerEmail?: T;
   shippingAddress?:
     | T
     | {
@@ -1916,9 +1983,9 @@ export interface OrdersSelect<T extends boolean = true> {
         country?: T;
         phone?: T;
         fatherName?: T;
+        novaPoshtaDelivery?: T;
       };
   customer?: T;
-  customerEmail?: T;
   transactions?: T;
   status?: T;
   amount?: T;
@@ -1942,11 +2009,26 @@ export interface TransactionsSelect<T extends boolean = true> {
         id?: T;
       };
   paymentMethod?: T;
-  stripe?:
+  liqpay?:
     | T
     | {
-        customerID?: T;
-        paymentIntentID?: T;
+        merchantOrderID?: T;
+        paymentID?: T;
+        liqpayOrderID?: T;
+        paytype?: T;
+        providerStatus?: T;
+        lastCallbackAt?: T;
+        finalizationState?: T;
+        shippingAddress?: T;
+        novaPoshtaDelivery?: T;
+      };
+  bankTransfer?:
+    | T
+    | {
+        referenceID?: T;
+        finalizationState?: T;
+        shippingAddress?: T;
+        novaPoshtaDelivery?: T;
       };
   billingAddress?:
     | T
@@ -1963,6 +2045,7 @@ export interface TransactionsSelect<T extends boolean = true> {
         country?: T;
         phone?: T;
         fatherName?: T;
+        novaPoshtaDelivery?: T;
       };
   status?: T;
   customer?: T;

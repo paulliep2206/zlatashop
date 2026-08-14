@@ -17,7 +17,7 @@ and shipment defaults, set:
 NOVA_POSHTA_CREATE_WAYBILL_ON_ORDER=true
 ```
 
-The waybill is created only after Stripe has confirmed payment and created the order. A Nova
+The waybill is created only after LiqPay has confirmed payment and created the order. A Nova
 Poshta failure does not roll back or hide a paid order: the order stores a `failed` waybill status
 and the server logs the original error. Successful responses store the waybill ref, number, cost,
 and estimated delivery date.

@@ -5,7 +5,6 @@ import { useCart, usePayments } from '@payloadcms/plugin-ecommerce/client/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useRef } from 'react'
 import { NOVA_POSHTA_DELIVERY_STORAGE_KEY } from '@/components/checkout/NovaPoshtaOfficeSelector'
-import { parseDelivery } from '@/integrations/nova-poshta/validation'
 import { useState } from 'react'
 import { Message } from '@/components/Message'
 
@@ -24,22 +23,19 @@ export const ConfirmOrder: React.FC = () => {
       return
     }
 
-    const paymentIntentID = searchParams.get('payment_intent')
+    const merchantOrderID = searchParams.get('liqpay_order_id')
     const email = searchParams.get('email')
 
-    if (paymentIntentID) {
+    if (merchantOrderID) {
       if (!isConfirming.current) {
         isConfirming.current = true
 
         const placeOrder = async () => {
           try {
-            const delivery = parseDelivery(
-              JSON.parse(sessionStorage.getItem(NOVA_POSHTA_DELIVERY_STORAGE_KEY) ?? 'null'),
-            )
-            const result = await confirmOrder('stripe', {
+            const result = await confirmOrder('liqpay', {
               additionalData: {
-                paymentIntentID,
-                novaPoshtaDelivery: delivery,
+                merchantOrderID,
+                ...(email ? { customerEmail: email } : {}),
               },
             })
 
@@ -57,6 +53,17 @@ export const ConfirmOrder: React.FC = () => {
               const queryString = queryParams.toString()
               sessionStorage.removeItem(NOVA_POSHTA_DELIVERY_STORAGE_KEY)
               router.push(`/orders/${result.orderID}${queryString ? `?${queryString}` : ''}`)
+            } else if (
+              result &&
+              typeof result === 'object' &&
+              'paymentStatus' in result &&
+              result.paymentStatus === 'pending'
+            ) {
+              isConfirming.current = false
+              setError('Payment is still being confirmed. Please try again in a moment.')
+            } else {
+              isConfirming.current = false
+              setError('Payment was not completed.')
             }
           } catch (error) {
             isConfirming.current = false
@@ -67,7 +74,7 @@ export const ConfirmOrder: React.FC = () => {
         void placeOrder()
       }
     } else {
-      // If no payment intent ID is found, redirect to the home
+      // If no LiqPay order ID is found, redirect to the home
       router.push('/')
     }
   }, [cart, confirmOrder, router, searchParams])

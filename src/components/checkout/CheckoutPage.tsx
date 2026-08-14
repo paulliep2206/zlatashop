@@ -6,41 +6,35 @@ import { Price } from '@/components/Price'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useTheme } from '@/providers/Theme'
-import { Elements } from '@stripe/react-stripe-js'
-import { loadStripe } from '@stripe/stripe-js'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import React, { Suspense, useCallback, useMemo, useState } from 'react'
+import React, { useCallback, useMemo, useState } from 'react'
 
-import { cssVariables } from '@/cssVariables'
-import { CheckoutForm } from '@/components/forms/CheckoutForm'
 import { useCart, usePayments } from '@payloadcms/plugin-ecommerce/client/react'
 import { Address } from '@/payload-types'
 import { FormItem } from '@/components/forms/FormItem'
 import { toast } from 'sonner'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
-import { NovaPoshtaOfficeSelector } from './NovaPoshtaOfficeSelector'
+import {
+  NOVA_POSHTA_DELIVERY_STORAGE_KEY,
+  NovaPoshtaOfficeSelector,
+} from './NovaPoshtaOfficeSelector'
 import type { NovaPoshtaDelivery } from '@/integrations/nova-poshta/types'
 import { getProductPrice } from '@/lib/pricing'
 
-const apiKey = `${process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}`
-const stripe = loadStripe(apiKey)
-
 type ContactInformation = Pick<Address, 'fatherName' | 'firstName' | 'lastName' | 'phone'>
+type PaymentMethod = 'liqpay' | 'bankTransfer'
 
 export const CheckoutPage: React.FC = () => {
   const router = useRouter()
-  const { cart } = useCart()
+  const { cart, clearCart } = useCart()
   const [error, setError] = useState<null | string>(null)
-  const { theme } = useTheme()
   /**
    * State to manage the checkout email input.
    */
   const [email, setEmail] = useState('')
   const [emailEditable, setEmailEditable] = useState(true)
-  const [paymentData, setPaymentData] = useState<null | Record<string, unknown>>(null)
-  const { initiatePayment } = usePayments()
+  const { confirmOrder, initiatePayment } = usePayments()
   const [contactInformation, setContactInformation] = useState<ContactInformation>({
     fatherName: '',
     firstName: '',
@@ -49,6 +43,7 @@ export const CheckoutPage: React.FC = () => {
   })
   const [isProcessingPayment, setProcessingPayment] = useState(false)
   const [novaPoshtaDelivery, setNovaPoshtaDelivery] = useState<NovaPoshtaDelivery>()
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('liqpay')
 
   const cartIsEmpty = !cart || !cart.items || !cart.items.length
 
@@ -73,6 +68,7 @@ export const CheckoutPage: React.FC = () => {
       addressLine1: novaPoshtaDelivery.warehouse.shortAddress,
       addressLine2: `Nova Poshta office №${novaPoshtaDelivery.warehouse.number}`,
       city: novaPoshtaDelivery.warehouse.cityDescription,
+      novaPoshtaDelivery,
     }
   }, [contactInformation, contactInformationIsComplete, novaPoshtaDelivery])
 
@@ -80,10 +76,12 @@ export const CheckoutPage: React.FC = () => {
     contactInformationIsComplete && !emailEditable && shippingAddress && novaPoshtaDelivery,
   )
 
-  const initiatePaymentIntent = useCallback(
-    async (paymentID: string) => {
+  const placeOrder = useCallback(
+    async () => {
       try {
-        const paymentData = (await initiatePayment(paymentID, {
+        setError(null)
+        setProcessingPayment(true)
+        const paymentData = (await initiatePayment(paymentMethod, {
           additionalData: {
             customerEmail: email.trim(),
             billingAddress: shippingAddress,
@@ -91,11 +89,58 @@ export const CheckoutPage: React.FC = () => {
           },
         })) as Record<string, unknown>
 
-        if (paymentData) {
-          setPaymentData(paymentData)
+        if (paymentMethod === 'liqpay') {
+          const checkoutURL = paymentData.checkoutURL
+          const data = paymentData.data
+          const signature = paymentData.signature
+          if (
+            typeof checkoutURL !== 'string' ||
+            typeof data !== 'string' ||
+            typeof signature !== 'string'
+          ) {
+            throw new Error('LiqPay checkout response is invalid.')
+          }
+
+          const form = document.createElement('form')
+          form.method = 'POST'
+          form.action = checkoutURL
+          for (const [name, value] of Object.entries({ data, signature })) {
+            const input = document.createElement('input')
+            input.type = 'hidden'
+            input.name = name
+            input.value = value
+            form.appendChild(input)
+          }
+          document.body.appendChild(form)
+          form.submit()
+          return
         }
+
+        if (typeof paymentData.referenceID !== 'string') {
+          throw new Error('Bank-transfer checkout response is invalid.')
+        }
+        const result = (await confirmOrder('bankTransfer', {
+          additionalData: {
+            customerEmail: email.trim(),
+            referenceID: paymentData.referenceID,
+          },
+        })) as Record<string, unknown>
+        if (typeof result.orderID !== 'number') throw new Error('Order was not created.')
+
+        const params = new URLSearchParams({ email: email.trim() })
+        if (typeof result.accessToken === 'string') params.set('accessToken', result.accessToken)
+        await clearCart()
+        sessionStorage.removeItem(NOVA_POSHTA_DELIVERY_STORAGE_KEY)
+        router.push(`/orders/${result.orderID}?${params.toString()}`)
       } catch (error) {
-        const errorData = error instanceof Error ? JSON.parse(error.message) : {}
+        let errorData: { cause?: { code?: string } } = {}
+        if (error instanceof Error) {
+          try {
+            errorData = JSON.parse(error.message) as typeof errorData
+          } catch {
+            // The provider may return a plain error message.
+          }
+        }
         let errorMessage = 'An error occurred while initiating payment.'
 
         if (errorData?.cause?.code === 'OutOfStock') {
@@ -104,12 +149,11 @@ export const CheckoutPage: React.FC = () => {
 
         setError(errorMessage)
         toast.error(errorMessage)
+        setProcessingPayment(false)
       }
     },
-    [email, initiatePayment, shippingAddress],
+    [clearCart, confirmOrder, email, initiatePayment, paymentMethod, router, shippingAddress],
   )
-
-  if (!stripe) return null
 
   if (cartIsEmpty && isProcessingPayment) {
     return (
@@ -236,32 +280,56 @@ export const CheckoutPage: React.FC = () => {
         </div>
 
         <NovaPoshtaOfficeSelector
-          disabled={Boolean(paymentData)}
+          disabled={isProcessingPayment}
           onChange={setNovaPoshtaDelivery}
           value={novaPoshtaDelivery}
         />
 
-        {!paymentData && (
-          <Button
-            className="self-start"
-            disabled={!canGoToPayment}
-            onClick={(e) => {
-              e.preventDefault()
-              void initiatePaymentIntent('stripe')
-            }}
-          >
-            Go to payment
-          </Button>
-        )}
+        <div className="flex flex-col gap-3 rounded-lg bg-accent p-4 dark:bg-black">
+          <h2 className="text-2xl font-medium">Payment</h2>
+          <label className="flex cursor-pointer items-center gap-3">
+            <input
+              checked={paymentMethod === 'liqpay'}
+              disabled={isProcessingPayment}
+              name="paymentMethod"
+              onChange={() => setPaymentMethod('liqpay')}
+              type="radio"
+              value="liqpay"
+            />
+            <span>LiqPay</span>
+          </label>
+          <label className="flex cursor-pointer items-center gap-3">
+            <input
+              checked={paymentMethod === 'bankTransfer'}
+              disabled={isProcessingPayment}
+              name="paymentMethod"
+              onChange={() => setPaymentMethod('bankTransfer')}
+              type="radio"
+              value="bankTransfer"
+            />
+            <span>Оплатити за реквізитами</span>
+          </label>
+        </div>
 
-        {!paymentData?.['clientSecret'] && error && (
+        <Button
+          className="self-start"
+          disabled={!canGoToPayment || isProcessingPayment}
+          onClick={(e) => {
+            e.preventDefault()
+            void placeOrder()
+          }}
+        >
+          {isProcessingPayment ? 'Processing...' : 'Place order'}
+        </Button>
+
+        {error && (
           <div className="my-8">
             <Message error={error} />
 
             <Button
               onClick={(e) => {
                 e.preventDefault()
-                router.refresh()
+                setError(null)
               }}
               variant="default"
             >
@@ -269,59 +337,6 @@ export const CheckoutPage: React.FC = () => {
             </Button>
           </div>
         )}
-
-        <Suspense fallback={<React.Fragment />}>
-          {/* @ts-ignore */}
-          {paymentData && paymentData?.['clientSecret'] && (
-            <div className="pb-16">
-              <h2 className="font-medium text-3xl">Payment</h2>
-              {error && <p>{`Error: ${error}`}</p>}
-              <Elements
-                options={{
-                  appearance: {
-                    theme: 'stripe',
-                    variables: {
-                      borderRadius: '6px',
-                      colorPrimary: '#858585',
-                      gridColumnSpacing: '20px',
-                      gridRowSpacing: '20px',
-                      colorBackground: theme === 'dark' ? '#0a0a0a' : cssVariables.colors.base0,
-                      colorDanger: cssVariables.colors.error500,
-                      colorDangerText: cssVariables.colors.error500,
-                      colorIcon:
-                        theme === 'dark' ? cssVariables.colors.base0 : cssVariables.colors.base1000,
-                      colorText: theme === 'dark' ? '#858585' : cssVariables.colors.base1000,
-                      colorTextPlaceholder: '#858585',
-                      fontFamily: 'Geist, sans-serif',
-                      fontSizeBase: '16px',
-                      fontWeightBold: '600',
-                      fontWeightNormal: '500',
-                      spacingUnit: '4px',
-                    },
-                  },
-                  clientSecret: paymentData['clientSecret'] as string,
-                }}
-                stripe={stripe}
-              >
-                <div className="flex flex-col gap-8">
-                  <CheckoutForm
-                    customerEmail={email.trim()}
-                    billingAddress={shippingAddress}
-                    novaPoshtaDelivery={novaPoshtaDelivery}
-                    setProcessingPayment={setProcessingPayment}
-                  />
-                  <Button
-                    variant="ghost"
-                    className="self-start"
-                    onClick={() => setPaymentData(null)}
-                  >
-                    Cancel payment
-                  </Button>
-                </div>
-              </Elements>
-            </div>
-          )}
-        </Suspense>
       </div>
 
       {!cartIsEmpty && (

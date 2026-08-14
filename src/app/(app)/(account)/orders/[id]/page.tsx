@@ -201,6 +201,7 @@ export default async function Order({ params, searchParams }: PageProps) {
 
             {/* @ts-expect-error - some kind of type hell */}
             <AddressItem address={order.shippingAddress} hideActions />
+            {order.customerEmail && <p>{order.customerEmail}</p>}
           </div>
         )}
 

@@ -1,10 +1,8 @@
 import type { PaymentAdapter } from '@payloadcms/plugin-ecommerce/types'
 
-import { createNovaPoshtaService, getPublicNovaPoshtaError } from '.'
-import { getNovaPoshtaConfig } from './config'
+import { createNovaPoshtaService } from '.'
+import { fulfillNovaPoshtaOrder } from './fulfillment'
 import { parseDelivery } from './validation'
-import type { NovaPoshtaOrderShipping, NovaPoshtaWaybill } from './types'
-import type { Order } from '@/payload-types'
 
 type AdapterOptions = {
   baseAdapter: PaymentAdapter
@@ -25,67 +23,11 @@ export const withNovaPoshta = ({
     const result = await baseAdapter.confirmOrder(args)
     const orderID = result.orderID
 
-    const initialShipping: NovaPoshtaOrderShipping = {
+    await fulfillNovaPoshtaOrder({
+      createService,
+      createWaybill: createWaybillOnOrder,
       delivery,
-      waybill: { status: 'not-requested' },
-    }
-
-    await args.req.payload.update({
-      collection: 'orders',
-      id: orderID,
-      data: { novaPoshtaShipping: initialShipping },
-      req: args.req,
-    })
-
-    if (!createWaybillOnOrder) {
-      return result
-    }
-
-    let waybill: NovaPoshtaWaybill
-    try {
-      const order = (await args.req.payload.findByID({
-        collection: 'orders',
-        id: orderID,
-        depth: 0,
-      })) as Order
-      const address = order.shippingAddress as
-        | { firstName?: string; lastName?: string; phone?: string }
-        | undefined
-      const config = getNovaPoshtaConfig()
-      const created = await createService().createWaybill({
-        delivery,
-        recipient: {
-          firstName: address?.firstName ?? '',
-          lastName: address?.lastName ?? '',
-          phone: address?.phone ?? '',
-        },
-        order: {
-          amount: typeof order.amount === 'number' ? order.amount : 0,
-          description: config.shipment.description,
-          weight: config.shipment.weight,
-        },
-      })
-
-      waybill = {
-        status: 'created',
-        ref: created.Ref,
-        number: created.IntDocNumber,
-        cost: created.CostOnSite ? Number(created.CostOnSite) : undefined,
-        estimatedDeliveryDate: created.EstimatedDeliveryDate,
-        createdAt: new Date().toISOString(),
-      }
-    } catch (error) {
-      args.req.payload.logger.error({ err: error, orderID }, 'Nova Poshta waybill creation failed')
-      waybill = {
-        status: 'failed',
-        error: getPublicNovaPoshtaError(error),
-      }
-    }
-
-    await args.req.payload.update({
-      collection: 'orders',
-      id: orderID,
-      data: { novaPoshtaShipping: { delivery, waybill } },
+      orderID,
       req: args.req,
     })
 
