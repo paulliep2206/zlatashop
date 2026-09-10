@@ -5,8 +5,6 @@ import { GenerateTitle, GenerateURL } from '@payloadcms/plugin-seo/types'
 import { FixedToolbarFeature, HeadingFeature, lexicalEditor } from '@payloadcms/richtext-lexical'
 import { ecommercePlugin } from '@payloadcms/plugin-ecommerce'
 
-import { stripeAdapter } from '@payloadcms/plugin-ecommerce/payments/stripe'
-
 import { Page, Product } from '@/payload-types'
 import { getServerSideURL } from '@/utilities/getURL'
 import { ProductsCollection } from '@/collections/Products'
@@ -16,8 +14,8 @@ import { customerOnlyFieldAccess } from '@/access/customerOnlyFieldAccess'
 import { isAdmin } from '@/access/isAdmin'
 import { isDocumentOwner } from '@/access/isDocumentOwner'
 import { uploadthingStorage } from '@payloadcms/storage-uploadthing'
-import { withNovaPoshta } from '@/integrations/nova-poshta/payment-adapter'
 import { calculateCartSubtotal } from '@/lib/pricing'
+import { UAH_CURRENCIES_CONFIG } from '@/lib/currency'
 
 const generateTitle: GenerateTitle<Product | Page> = ({ doc }) => {
   return doc?.title ? `${doc.title} | Payload Ecommerce Template` : 'Payload Ecommerce Template'
@@ -90,6 +88,7 @@ export const plugins: Plugin[] = [
     customers: {
       slug: 'users',
     },
+    currencies: UAH_CURRENCIES_CONFIG,
     carts: {
       cartsCollectionOverride: ({ defaultCollection }) => ({
         ...defaultCollection,
@@ -185,22 +184,12 @@ export const plugins: Plugin[] = [
         ],
       }),
     },
-    payments: {
-      paymentMethods: [
-        withNovaPoshta({
-          baseAdapter: stripeAdapter({
-            secretKey: process.env.STRIPE_SECRET_KEY!,
-            publishableKey: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!,
-            webhookSecret: process.env.STRIPE_WEBHOOKS_SIGNING_SECRET!,
-          }),
-        }),
-      ],
-    },
     products: {
       productsCollectionOverride: ProductsCollection,
       // The cart hooks above validate and calculate from the custom UAH price fields.
       // Payload's default validator only understands generated priceIn{currency} fields.
       validation: () => undefined,
+      variants: false,
     },
   }),
   uploadthingStorage({

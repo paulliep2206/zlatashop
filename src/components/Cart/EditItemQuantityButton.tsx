@@ -12,16 +12,10 @@ export function EditItemQuantityButton({ type, item }: { item: CartItem; type: '
   const disabled = useMemo(() => {
     if (!item.id) return true
 
-    const target =
-      item.variant && typeof item.variant === 'object'
-        ? item.variant
-        : item.product && typeof item.product === 'object'
-          ? item.product
-          : null
+    const target = item.product && typeof item.product === 'object' ? item.product : null
 
     if (target && typeof target === 'object') {
-      const availableStock =
-        'stock' in target ? target.stock : 'inventory' in target ? target.inventory : undefined
+      const availableStock = 'stock' in target ? target.stock : undefined
 
       if (type === 'plus' && item.quantity !== undefined && item.quantity !== null) {
         return typeof availableStock === 'number' && item.quantity >= availableStock

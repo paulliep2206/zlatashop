@@ -1,4 +1,3 @@
-import type { PaymentAdapter } from '@payloadcms/plugin-ecommerce/types'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -10,7 +9,7 @@ import {
   createNovaPoshtaWarehousesEndpoint,
 } from '@/integrations/nova-poshta/endpoints'
 import { NovaPoshtaError, getPublicNovaPoshtaError } from '@/integrations/nova-poshta/errors'
-import { withNovaPoshta } from '@/integrations/nova-poshta/payment-adapter'
+import { fulfillNovaPoshtaOrder } from '@/integrations/nova-poshta/fulfillment'
 import { NovaPoshtaService } from '@/integrations/nova-poshta/service'
 import type { NovaPoshtaDelivery, NovaPoshtaWarehouse } from '@/integrations/nova-poshta/types'
 import { parseDelivery, parseWarehouse } from '@/integrations/nova-poshta/validation'
@@ -275,7 +274,7 @@ describe('Nova Poshta validation and configuration', () => {
   })
 })
 
-describe('Nova Poshta payment adapter', () => {
+describe('Nova Poshta paid-order fulfillment', () => {
   const originalEnv = { ...process.env }
 
   beforeEach(() => {
@@ -300,28 +299,13 @@ describe('Nova Poshta payment adapter', () => {
       }),
       logger: { error: vi.fn() },
     }
-    const baseAdapter = {
-      name: 'stripe',
-      group: {},
-      initiatePayment: vi.fn(),
-      confirmOrder: vi.fn().mockResolvedValue({
-        message: 'ok',
-        orderID: 42,
-        transactionID: 9,
-      }),
-    } as unknown as PaymentAdapter
-    const args = {
-      data: { novaPoshtaDelivery: delivery },
-      req: { payload },
-    } as unknown as Parameters<PaymentAdapter['confirmOrder']>[0]
-    return { args, baseAdapter, payload }
+    const req = { payload } as never
+    return { req, payload }
   }
 
   it('saves selection without creating a waybill when automation is disabled', async () => {
-    const { args, baseAdapter, payload } = makeContext()
-    const adapter = withNovaPoshta({ baseAdapter, createWaybillOnOrder: false })
-
-    await adapter.confirmOrder(args)
+    const { req, payload } = makeContext()
+    await fulfillNovaPoshtaOrder({ delivery, orderID: 42, req, createWaybill: false })
 
     expect(payload.update).toHaveBeenCalledOnce()
     expect(payload.update).toHaveBeenCalledWith(
@@ -337,19 +321,19 @@ describe('Nova Poshta payment adapter', () => {
   })
 
   it('records a created waybill', async () => {
-    const { args, baseAdapter, payload } = makeContext()
+    const { req, payload } = makeContext()
     const createWaybill = vi.fn().mockResolvedValue({
       Ref: 'waybill-ref',
       IntDocNumber: '20450000000000',
       CostOnSite: '80',
     })
-    const adapter = withNovaPoshta({
-      baseAdapter,
-      createWaybillOnOrder: true,
+    await fulfillNovaPoshtaOrder({
+      delivery,
+      orderID: 42,
+      req,
+      createWaybill: true,
       createService: () => ({ createWaybill }) as never,
     })
-
-    await adapter.confirmOrder(args)
 
     expect(createWaybill).toHaveBeenCalled()
     expect(payload.update).toHaveBeenLastCalledWith(
@@ -368,15 +352,15 @@ describe('Nova Poshta payment adapter', () => {
   })
 
   it('keeps the paid order and records a failed waybill', async () => {
-    const { args, baseAdapter, payload } = makeContext()
-    const adapter = withNovaPoshta({
-      baseAdapter,
-      createWaybillOnOrder: true,
+    const { req, payload } = makeContext()
+    await fulfillNovaPoshtaOrder({
+      delivery,
+      orderID: 42,
+      req,
+      createWaybill: true,
       createService: () =>
         ({ createWaybill: vi.fn().mockRejectedValue(new Error('API failed')) }) as never,
     })
-
-    await expect(adapter.confirmOrder(args)).resolves.toMatchObject({ orderID: 42 })
     expect(payload.update).toHaveBeenLastCalledWith(
       expect.objectContaining({
         data: {
@@ -390,15 +374,6 @@ describe('Nova Poshta payment adapter', () => {
         },
       }),
     )
-  })
-
-  it('validates delivery before creating the base order', async () => {
-    const { args, baseAdapter } = makeContext()
-    args.data.novaPoshtaDelivery = null
-    const adapter = withNovaPoshta({ baseAdapter })
-
-    await expect(adapter.confirmOrder(args)).rejects.toMatchObject({ code: 'VALIDATION' })
-    expect(baseAdapter.confirmOrder).not.toHaveBeenCalled()
   })
 })
 

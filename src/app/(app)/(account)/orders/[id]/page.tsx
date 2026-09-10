@@ -178,16 +178,9 @@ export default async function Order({ params, searchParams }: PageProps) {
                   return <div key={index}>This item is no longer available.</div>
                 }
 
-                const variant =
-                  item.variant && typeof item.variant === 'object' ? item.variant : undefined
-
                 return (
                   <li key={item.id}>
-                    <ProductItem
-                      product={item.product}
-                      quantity={item.quantity}
-                      variant={variant}
-                    />
+                    <ProductItem product={item.product} quantity={item.quantity} />
                   </li>
                 )
               })}

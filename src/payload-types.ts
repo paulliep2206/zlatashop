@@ -77,12 +77,10 @@ export interface Config {
     categories: Category;
     media: Media;
     attributes: Attribute;
+    'wayforpay-payments': WayforpayPayment;
     forms: Form;
     'form-submissions': FormSubmission;
     addresses: Address;
-    variants: Variant;
-    variantTypes: VariantType;
-    variantOptions: VariantOption;
     products: Product;
     carts: Cart;
     orders: Order;
@@ -98,9 +96,6 @@ export interface Config {
       cart: 'carts';
       addresses: 'addresses';
     };
-    variantTypes: {
-      options: 'variantOptions';
-    };
   };
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
@@ -108,12 +103,10 @@ export interface Config {
     categories: CategoriesSelect<false> | CategoriesSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
     attributes: AttributesSelect<false> | AttributesSelect<true>;
+    'wayforpay-payments': WayforpayPaymentsSelect<false> | WayforpayPaymentsSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
     'form-submissions': FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
     addresses: AddressesSelect<false> | AddressesSelect<true>;
-    variants: VariantsSelect<false> | VariantsSelect<true>;
-    variantTypes: VariantTypesSelect<false> | VariantTypesSelect<true>;
-    variantOptions: VariantOptionsSelect<false> | VariantOptionsSelect<true>;
     products: ProductsSelect<false> | ProductsSelect<true>;
     carts: CartsSelect<false> | CartsSelect<true>;
     orders: OrdersSelect<false> | OrdersSelect<true>;
@@ -155,9 +148,6 @@ export interface Config {
       orders: Order;
       products: Product;
       transactions: Transaction;
-      variantOptions: VariantOption;
-      variants: Variant;
-      variantTypes: VariantType;
     };
   };
 }
@@ -230,7 +220,6 @@ export interface Order {
   items?:
     | {
         product?: (number | null) | Product;
-        variant?: (number | null) | Variant;
         quantity: number;
         id?: string | null;
       }[]
@@ -254,7 +243,7 @@ export interface Order {
   transactions?: (number | Transaction)[] | null;
   status?: OrderStatus;
   amount?: number | null;
-  currency?: 'USD' | null;
+  currency?: 'UAH' | null;
   accessToken?: string | null;
   /**
    * Selected Nova Poshta office and automatic electronic waybill status.
@@ -332,7 +321,6 @@ export interface Product {
   gallery?:
     | {
         image: number | Media;
-        variantOption?: (number | null) | VariantOption;
         id?: string | null;
       }[]
     | null;
@@ -403,40 +391,6 @@ export interface Media {
   height?: number | null;
   focalX?: number | null;
   focalY?: number | null;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "variantOptions".
- */
-export interface VariantOption {
-  id: number;
-  _variantOptions_options_order?: string | null;
-  variantType: number | VariantType;
-  label: string;
-  /**
-   * should be defaulted or dynamic based on label
-   */
-  value: string;
-  updatedAt: string;
-  createdAt: string;
-  deletedAt?: string | null;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "variantTypes".
- */
-export interface VariantType {
-  id: number;
-  label: string;
-  name: string;
-  options?: {
-    docs?: (number | VariantOption)[];
-    hasNextPage?: boolean;
-    totalDocs?: number;
-  };
-  updatedAt: string;
-  createdAt: string;
-  deletedAt?: string | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1031,26 +985,6 @@ export interface Form {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "variants".
- */
-export interface Variant {
-  id: number;
-  /**
-   * Used for administrative purposes, not shown to customers. This is populated by default.
-   */
-  title?: string | null;
-  product: number | Product;
-  options: (number | VariantOption)[];
-  inventory?: number | null;
-  priceInUSDEnabled?: boolean | null;
-  priceInUSD?: number | null;
-  updatedAt: string;
-  createdAt: string;
-  deletedAt?: string | null;
-  _status?: ('draft' | 'published') | null;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "transactions".
  */
 export interface Transaction {
@@ -1058,16 +992,10 @@ export interface Transaction {
   items?:
     | {
         product?: (number | null) | Product;
-        variant?: (number | null) | Variant;
         quantity: number;
         id?: string | null;
       }[]
     | null;
-  paymentMethod?: 'stripe' | null;
-  stripe?: {
-    customerID?: string | null;
-    paymentIntentID?: string | null;
-  };
   billingAddress?: {
     title?: string | null;
     firstName?: string | null;
@@ -1088,7 +1016,7 @@ export interface Transaction {
   order?: (number | null) | Order;
   cart?: (number | null) | Cart;
   amount?: number | null;
-  currency?: 'USD' | null;
+  currency?: 'UAH' | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1101,7 +1029,6 @@ export interface Cart {
   items?:
     | {
         product?: (number | null) | Product;
-        variant?: (number | null) | Variant;
         quantity: number;
         id?: string | null;
       }[]
@@ -1111,7 +1038,7 @@ export interface Cart {
   purchasedAt?: string | null;
   status?: ('active' | 'purchased' | 'abandoned') | null;
   subtotal?: number | null;
-  currency?: 'USD' | null;
+  currency?: 'UAH' | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1179,6 +1106,71 @@ export interface Address {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "wayforpay-payments".
+ */
+export interface WayforpayPayment {
+  id: number;
+  orderReference: string;
+  publicToken: string;
+  status: 'created' | 'pending' | 'finalizing' | 'approved' | 'declined' | 'expired' | 'refunded' | 'failed';
+  amountMinor: number;
+  providerAmount: string;
+  currency: 'UAH';
+  cart: number | Cart;
+  customer?: (number | null) | User;
+  customerEmail: string;
+  itemsSnapshot:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  shippingAddressSnapshot:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  novaPoshtaDeliverySnapshot:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  order?: (number | null) | Order;
+  transactionStatus?: string | null;
+  reason?: string | null;
+  reasonCode?: string | null;
+  authCode?: string | null;
+  paymentSystem?: string | null;
+  cardPan?: string | null;
+  cardType?: string | null;
+  processingDate?: string | null;
+  callbackReceivedAt?: string | null;
+  finalizedAt?: string | null;
+  providerResponse?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "form-submissions".
  */
 export interface FormSubmission {
@@ -1239,6 +1231,10 @@ export interface PayloadLockedDocument {
         value: number | Attribute;
       } | null)
     | ({
+        relationTo: 'wayforpay-payments';
+        value: number | WayforpayPayment;
+      } | null)
+    | ({
         relationTo: 'forms';
         value: number | Form;
       } | null)
@@ -1249,18 +1245,6 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'addresses';
         value: number | Address;
-      } | null)
-    | ({
-        relationTo: 'variants';
-        value: number | Variant;
-      } | null)
-    | ({
-        relationTo: 'variantTypes';
-        value: number | VariantType;
-      } | null)
-    | ({
-        relationTo: 'variantOptions';
-        value: number | VariantOption;
       } | null)
     | ({
         relationTo: 'products';
@@ -1609,6 +1593,38 @@ export interface AttributesSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "wayforpay-payments_select".
+ */
+export interface WayforpayPaymentsSelect<T extends boolean = true> {
+  orderReference?: T;
+  publicToken?: T;
+  status?: T;
+  amountMinor?: T;
+  providerAmount?: T;
+  currency?: T;
+  cart?: T;
+  customer?: T;
+  customerEmail?: T;
+  itemsSnapshot?: T;
+  shippingAddressSnapshot?: T;
+  novaPoshtaDeliverySnapshot?: T;
+  order?: T;
+  transactionStatus?: T;
+  reason?: T;
+  reasonCode?: T;
+  authCode?: T;
+  paymentSystem?: T;
+  cardPan?: T;
+  cardType?: T;
+  processingDate?: T;
+  callbackReceivedAt?: T;
+  finalizedAt?: T;
+  providerResponse?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "forms_select".
  */
 export interface FormsSelect<T extends boolean = true> {
@@ -1779,47 +1795,6 @@ export interface AddressesSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "variants_select".
- */
-export interface VariantsSelect<T extends boolean = true> {
-  title?: T;
-  product?: T;
-  options?: T;
-  inventory?: T;
-  priceInUSDEnabled?: T;
-  priceInUSD?: T;
-  updatedAt?: T;
-  createdAt?: T;
-  deletedAt?: T;
-  _status?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "variantTypes_select".
- */
-export interface VariantTypesSelect<T extends boolean = true> {
-  label?: T;
-  name?: T;
-  options?: T;
-  updatedAt?: T;
-  createdAt?: T;
-  deletedAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "variantOptions_select".
- */
-export interface VariantOptionsSelect<T extends boolean = true> {
-  _variantOptions_options_order?: T;
-  variantType?: T;
-  label?: T;
-  value?: T;
-  updatedAt?: T;
-  createdAt?: T;
-  deletedAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "products_select".
  */
 export interface ProductsSelect<T extends boolean = true> {
@@ -1839,7 +1814,6 @@ export interface ProductsSelect<T extends boolean = true> {
     | T
     | {
         image?: T;
-        variantOption?: T;
         id?: T;
       };
   layout?:
@@ -1875,7 +1849,6 @@ export interface CartsSelect<T extends boolean = true> {
     | T
     | {
         product?: T;
-        variant?: T;
         quantity?: T;
         id?: T;
       };
@@ -1897,7 +1870,6 @@ export interface OrdersSelect<T extends boolean = true> {
     | T
     | {
         product?: T;
-        variant?: T;
         quantity?: T;
         id?: T;
       };
@@ -1937,16 +1909,8 @@ export interface TransactionsSelect<T extends boolean = true> {
     | T
     | {
         product?: T;
-        variant?: T;
         quantity?: T;
         id?: T;
-      };
-  paymentMethod?: T;
-  stripe?:
-    | T
-    | {
-        customerID?: T;
-        paymentIntentID?: T;
       };
   billingAddress?:
     | T
