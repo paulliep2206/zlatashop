@@ -2,14 +2,12 @@ import type { CollectionSlug, GlobalSlug, Payload, PayloadRequest, File } from '
 
 import { contactFormData } from './contact-form'
 import { contactPageData } from './contact-page'
-import { productHatData } from './product-hat'
-import { productTshirtData, productTshirtVariant } from './product-tshirt'
 import { homePageData } from './home'
 import { imageHatData } from './image-hat'
 import { imageTshirtBlackData } from './image-tshirt-black'
 import { imageTshirtWhiteData } from './image-tshirt-white'
 import { imageHero1Data } from './image-hero-1'
-import { Address, Transaction, VariantOption } from '@/payload-types'
+import { Address } from '@/payload-types'
 
 const collections: CollectionSlug[] = [
   'categories',
@@ -18,32 +16,16 @@ const collections: CollectionSlug[] = [
   'products',
   'forms',
   'form-submissions',
-  'variants',
-  'variantOptions',
-  'variantTypes',
   'carts',
-  'transactions',
   'addresses',
   'orders',
 ]
 
 const categories = ['Accessories', 'T-Shirts', 'Hats']
 
-const sizeVariantOptions = [
-  { label: 'Small', value: 'small' },
-  { label: 'Medium', value: 'medium' },
-  { label: 'Large', value: 'large' },
-  { label: 'X Large', value: 'xlarge' },
-]
-
-const colorVariantOptions = [
-  { label: 'Black', value: 'black' },
-  { label: 'White', value: 'white' },
-]
-
 const globals: GlobalSlug[] = ['header', 'footer']
 
-const baseAddressUSData: Transaction['billingAddress'] = {
+const baseAddressUSData: Partial<Address> = {
   title: 'Dr.',
   firstName: 'Otto',
   lastName: 'Octavius',
@@ -57,7 +39,7 @@ const baseAddressUSData: Transaction['billingAddress'] = {
   country: 'US',
 }
 
-const baseAddressUKData: Transaction['billingAddress'] = {
+const baseAddressUKData: Partial<Address> = {
   title: 'Mr.',
   firstName: 'Oliver',
   lastName: 'Twist',
@@ -190,118 +172,77 @@ export const seed = async ({
     ),
   ])
 
-  payload.logger.info(`— Seeding variant types and options...`)
-
-  const sizeVariantType = await payload.create({
-    collection: 'variantTypes',
-    data: {
-      name: 'size',
-      label: 'Size',
-    },
-  })
-
-  const sizeVariantOptionsResults: VariantOption[] = []
-
-  for (const option of sizeVariantOptions) {
-    const result = await payload.create({
-      collection: 'variantOptions',
-      data: {
-        ...option,
-        variantType: sizeVariantType.id,
-      },
-    })
-    sizeVariantOptionsResults.push(result)
-  }
-
-  const [small, medium, large, xlarge] = sizeVariantOptionsResults
-
-  const colorVariantType = await payload.create({
-    collection: 'variantTypes',
-    data: {
-      name: 'color',
-      label: 'Color',
-    },
-  })
-
-  const [black, white] = await Promise.all(
-    colorVariantOptions.map((option) => {
-      return payload.create({
-        collection: 'variantOptions',
-        data: {
-          ...option,
-          variantType: colorVariantType.id,
-        },
-      })
-    }),
-  )
-
   payload.logger.info(`— Seeding products...`)
 
   const productHat = await payload.create({
     collection: 'products',
     depth: 0,
-    data: productHatData({
-      galleryImage: imageHat,
-      metaImage: imageHat,
-      variantTypes: [colorVariantType],
-      categories: [hatsCategory],
-      relatedProducts: [],
-    }),
+    data: {
+      title: 'Hat',
+      slug: 'hat',
+      sku: 'hat',
+      productType: 'simple',
+      price: 2500,
+      stockStatus: 'in_stock',
+      stock: 100,
+      gallery: [{ image: imageHat.id }],
+      categories: [hatsCategory.id],
+      _status: 'published',
+    },
   })
+
+  const [blackTshirt, whiteTshirt] = await Promise.all([
+    payload.create({
+      collection: 'products',
+      depth: 0,
+      data: {
+        title: 'T-Shirt — Black',
+        slug: 'tshirt-black',
+        sku: 'tshirt-black',
+        productType: 'simple',
+        price: 4999,
+        stockStatus: 'in_stock',
+        stock: 50,
+        gallery: [{ image: imageTshirtBlack.id }],
+        categories: [tshirtsCategory.id],
+        _status: 'published',
+      },
+    }),
+    payload.create({
+      collection: 'products',
+      depth: 0,
+      data: {
+        title: 'T-Shirt — White',
+        slug: 'tshirt-white',
+        sku: 'tshirt-white',
+        productType: 'simple',
+        price: 4999,
+        stockStatus: 'in_stock',
+        stock: 50,
+        gallery: [{ image: imageTshirtWhite.id }],
+        categories: [tshirtsCategory.id],
+        _status: 'published',
+      },
+    }),
+  ])
 
   const productTshirt = await payload.create({
     collection: 'products',
     depth: 0,
-    data: productTshirtData({
-      galleryImages: [
-        { image: imageTshirtBlack, variantOption: black },
-        { image: imageTshirtWhite, variantOption: white },
-      ],
-      metaImage: imageTshirtBlack,
-      contentImage: imageHero,
-      variantTypes: [colorVariantType, sizeVariantType],
-      categories: [tshirtsCategory],
-      relatedProducts: [productHat],
-    }),
+    data: {
+      title: 'T-Shirt',
+      slug: 'tshirt',
+      sku: 'tshirt',
+      productType: 'configurable',
+      variants: [blackTshirt.id, whiteTshirt.id],
+      price: 4999,
+      stockStatus: 'in_stock',
+      stock: 0,
+      gallery: [{ image: imageTshirtBlack.id }, { image: imageTshirtWhite.id }],
+      categories: [tshirtsCategory.id],
+      _status: 'published',
+    },
   })
-
-  let hoodieID: number | string = productTshirt.id
-
-  if (payload.db.defaultIDType === 'text') {
-    hoodieID = `"${hoodieID}"`
-  }
-
-  const [
-    smallTshirtHoodieVariant,
-    mediumTshirtHoodieVariant,
-    largeTshirtHoodieVariant,
-    xlargeTshirtHoodieVariant,
-  ] = await Promise.all(
-    [small, medium, large, xlarge].map((variantOption) =>
-      payload.create({
-        collection: 'variants',
-        depth: 0,
-        data: productTshirtVariant({
-          product: productTshirt,
-          variantOptions: [variantOption, white],
-        }),
-      }),
-    ),
-  )
-
-  await Promise.all(
-    [small, medium, large, xlarge].map((variantOption) =>
-      payload.create({
-        collection: 'variants',
-        depth: 0,
-        data: productTshirtVariant({
-          product: productTshirt,
-          variantOptions: [variantOption, black],
-          ...(variantOption.value === 'medium' ? { inventory: 0 } : {}),
-        }),
-      }),
-    ),
-  )
 
   payload.logger.info(`— Seeding contact form...`)
 
@@ -351,44 +292,6 @@ export const seed = async ({
     },
   })
 
-  payload.logger.info(`— Seeding transactions...`)
-
-  const pendingTransaction = await payload.create({
-    collection: 'transactions',
-    data: {
-      currency: 'USD',
-      customer: customer.id,
-      paymentMethod: 'stripe',
-      stripe: {
-        customerID: 'cus_123',
-        paymentIntentID: 'pi_123',
-      },
-      status: 'pending',
-      billingAddress: baseAddressUSData,
-    },
-  })
-
-  const succeededTransaction = await payload.create({
-    collection: 'transactions',
-    data: {
-      currency: 'USD',
-      customer: customer.id,
-      paymentMethod: 'stripe',
-      stripe: {
-        customerID: 'cus_123',
-        paymentIntentID: 'pi_123',
-      },
-      status: 'succeeded',
-      billingAddress: baseAddressUSData,
-    },
-  })
-
-  let succeededTransactionID: number | string = succeededTransaction.id
-
-  if (payload.db.defaultIDType === 'text') {
-    succeededTransactionID = `"${succeededTransactionID}"`
-  }
-
   payload.logger.info(`— Seeding carts...`)
 
   // This cart is open as it's created now
@@ -396,11 +299,10 @@ export const seed = async ({
     collection: 'carts',
     data: {
       customer: customer.id,
-      currency: 'USD',
+      currency: 'UAH',
       items: [
         {
-          product: productTshirt.id,
-          variant: mediumTshirtHoodieVariant.id,
+          product: blackTshirt.id,
           quantity: 1,
         },
       ],
@@ -413,7 +315,7 @@ export const seed = async ({
   const abandonedCart = await payload.create({
     collection: 'carts',
     data: {
-      currency: 'USD',
+      currency: 'UAH',
       createdAt: oldTimestamp,
       items: [
         {
@@ -429,18 +331,16 @@ export const seed = async ({
     collection: 'carts',
     data: {
       customer: customer.id,
-      currency: 'USD',
+      currency: 'UAH',
       purchasedAt: new Date().toISOString(),
       subtotal: 7499,
       items: [
         {
-          product: productTshirt.id,
-          variant: smallTshirtHoodieVariant.id,
+          product: blackTshirt.id,
           quantity: 1,
         },
         {
-          product: productTshirt.id,
-          variant: mediumTshirtHoodieVariant.id,
+          product: whiteTshirt.id,
           quantity: 1,
         },
       ],
@@ -459,23 +359,20 @@ export const seed = async ({
     collection: 'orders',
     data: {
       amount: 7499,
-      currency: 'USD',
+      currency: 'UAH',
       customer: customer.id,
       shippingAddress: baseAddressUSData,
       items: [
         {
-          product: productTshirt.id,
-          variant: smallTshirtHoodieVariant.id,
+          product: blackTshirt.id,
           quantity: 1,
         },
         {
-          product: productTshirt.id,
-          variant: mediumTshirtHoodieVariant.id,
+          product: whiteTshirt.id,
           quantity: 1,
         },
       ],
       status: 'completed',
-      transactions: [succeededTransaction.id],
     },
   })
 
@@ -483,23 +380,20 @@ export const seed = async ({
     collection: 'orders',
     data: {
       amount: 7499,
-      currency: 'USD',
+      currency: 'UAH',
       customer: customer.id,
       shippingAddress: baseAddressUSData,
       items: [
         {
-          product: productTshirt.id,
-          variant: smallTshirtHoodieVariant.id,
+          product: blackTshirt.id,
           quantity: 1,
         },
         {
-          product: productTshirt.id,
-          variant: mediumTshirtHoodieVariant.id,
+          product: whiteTshirt.id,
           quantity: 1,
         },
       ],
       status: 'processing',
-      transactions: [succeededTransaction.id],
     },
   })
 

@@ -19,7 +19,7 @@ export async function POST(): Promise<Response> {
   }
 
   try {
-    // Create a Payload request object to pass to the Local API for transactions
+    // Create a Payload request object to pass to the Local API operations.
     // At this point you should pass in a user, locale, and any other context you need for the Local API
     const payloadReq = await createLocalReq({ user }, payload)
 

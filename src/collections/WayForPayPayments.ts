@@ -1,0 +1,68 @@
+import type { CollectionConfig } from 'payload'
+
+import { isAdmin } from '@/access/isAdmin'
+
+export const WayForPayPayments: CollectionConfig = {
+  slug: 'wayforpay-payments',
+  access: {
+    create: isAdmin,
+    delete: isAdmin,
+    read: isAdmin,
+    update: isAdmin,
+  },
+  admin: {
+    defaultColumns: ['orderReference', 'status', 'amountMinor', 'paymentSystem', 'updatedAt'],
+    group: 'Shop',
+    useAsTitle: 'orderReference',
+  },
+  fields: [
+    { name: 'orderReference', type: 'text', required: true, unique: true, index: true },
+    {
+      name: 'publicToken',
+      type: 'text',
+      required: true,
+      unique: true,
+      index: true,
+      admin: { hidden: true },
+    },
+    {
+      name: 'status',
+      type: 'select',
+      required: true,
+      defaultValue: 'created',
+      index: true,
+      options: [
+        'created',
+        'pending',
+        'finalizing',
+        'approved',
+        'declined',
+        'expired',
+        'refunded',
+        'failed',
+      ],
+    },
+    { name: 'amountMinor', type: 'number', required: true, min: 1 },
+    { name: 'providerAmount', type: 'text', required: true },
+    { name: 'currency', type: 'select', required: true, defaultValue: 'UAH', options: ['UAH'] },
+    { name: 'cart', type: 'relationship', relationTo: 'carts', required: true, index: true },
+    { name: 'customer', type: 'relationship', relationTo: 'users' },
+    { name: 'customerEmail', type: 'email', required: true },
+    { name: 'itemsSnapshot', type: 'json', required: true },
+    { name: 'shippingAddressSnapshot', type: 'json', required: true },
+    { name: 'novaPoshtaDeliverySnapshot', type: 'json', required: true },
+    { name: 'order', type: 'relationship', relationTo: 'orders', unique: true },
+    { name: 'transactionStatus', type: 'text' },
+    { name: 'reason', type: 'text' },
+    { name: 'reasonCode', type: 'text' },
+    { name: 'authCode', type: 'text' },
+    { name: 'paymentSystem', type: 'text' },
+    { name: 'cardPan', type: 'text' },
+    { name: 'cardType', type: 'text' },
+    { name: 'processingDate', type: 'date' },
+    { name: 'callbackReceivedAt', type: 'date' },
+    { name: 'finalizedAt', type: 'date' },
+    { name: 'providerResponse', type: 'json' },
+  ],
+  timestamps: true,
+}

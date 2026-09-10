@@ -132,127 +132,129 @@ export const NovaPoshtaOfficeSelector: React.FC<Props> = ({ disabled, onChange, 
 
   return (
     <section className="flex flex-col gap-4">
-      <h2 className="font-medium text-3xl">Delivery</h2>
-      <p>Select a Nova Poshta office for this order.</p>
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="relative flex flex-col gap-2">
-          <Label htmlFor="nova-poshta-city">City</Label>
-          <Input
-            aria-autocomplete="list"
-            aria-controls="nova-poshta-city-suggestions"
-            aria-expanded={citySuggestions.length > 0}
-            disabled={disabled}
-            id="nova-poshta-city"
-            onChange={(event) => {
-              setError(undefined)
-              setCity(event.target.value)
-              setSelectedCity(undefined)
-              setOfficeSearch('')
-              setOfficeSelected(false)
-              setWarehouses([])
-              onChange(undefined)
-              sessionStorage.removeItem(NOVA_POSHTA_DELIVERY_STORAGE_KEY)
-            }}
-            placeholder="Київ"
-            value={city}
-          />
-          {loadingCities && <p className="text-sm">Searching cities…</p>}
-          {citySuggestions.length > 0 && (
-            <ul
-              className="bg-background absolute top-full z-20 mt-1 max-h-60 w-full overflow-auto rounded-md border shadow-md"
-              id="nova-poshta-city-suggestions"
-              role="listbox"
-            >
-              {citySuggestions.map((suggestion) => (
-                <li key={suggestion.ref} role="option">
-                  <button
-                    className="hover:bg-accent focus:bg-accent w-full px-3 py-2 text-left"
-                    onClick={(event) => {
-                      event.preventDefault()
-                      setCity(suggestion.description)
-                      setSelectedCity(suggestion)
-                      setCitySuggestions([])
-                      setOfficeSearch('')
-                      setOfficeSelected(false)
-                      onChange(undefined)
-                    }}
-                    type="button"
-                  >
-                    {[suggestion.settlementTypeDescription, suggestion.description]
-                      .filter(Boolean)
-                      .join(' ')}
-                    {suggestion.areaDescription ? `, ${suggestion.areaDescription} область` : ''}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-        <div className="relative flex flex-col gap-2">
-          <Label htmlFor="nova-poshta-office">Nova Poshta office</Label>
-          <Input
-            aria-autocomplete="list"
-            aria-controls="nova-poshta-office-suggestions"
-            aria-expanded={officeFocused && !officeSelected && warehouses.length > 0}
-            disabled={disabled || !selectedCity}
-            id="nova-poshta-office"
-            onBlur={() => setOfficeFocused(false)}
-            onChange={(event) => {
-              setOfficeSearch(event.target.value)
-              setOfficeSelected(false)
-              onChange(undefined)
-              sessionStorage.removeItem(NOVA_POSHTA_DELIVERY_STORAGE_KEY)
-            }}
-            onFocus={() => setOfficeFocused(true)}
-            placeholder="Type office number or address"
-            value={officeSearch}
-          />
-          {officeFocused && !officeSelected && warehouses.length > 0 && (
-            <ul
-              className="bg-background absolute top-full z-20 mt-1 max-h-60 w-full overflow-auto rounded-md border shadow-md"
-              id="nova-poshta-office-suggestions"
-              role="listbox"
-            >
-              {warehouses.map((warehouse) => (
-                <li key={warehouse.ref} role="option">
-                  <button
-                    className="hover:bg-accent focus:bg-accent w-full px-3 py-2 text-left"
-                    onClick={(event) => {
-                      event.preventDefault()
-                      const delivery = {
-                        provider: 'nova-poshta',
-                        serviceType: 'WarehouseWarehouse',
-                        warehouse,
-                      } satisfies NovaPoshtaDelivery
+      <h2 className="font-medium text-3xl">Доставка</h2>
+      <div className="bg-primary/5 rounded-lg p-4">
+        <p>Select a Nova Poshta office for this order.</p>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="relative flex flex-col gap-2">
+            <Label htmlFor="nova-poshta-city">Місто</Label>
+            <Input
+              aria-autocomplete="list"
+              aria-controls="nova-poshta-city-suggestions"
+              aria-expanded={citySuggestions.length > 0}
+              disabled={disabled}
+              id="nova-poshta-city"
+              onChange={(event) => {
+                setError(undefined)
+                setCity(event.target.value)
+                setSelectedCity(undefined)
+                setOfficeSearch('')
+                setOfficeSelected(false)
+                setWarehouses([])
+                onChange(undefined)
+                sessionStorage.removeItem(NOVA_POSHTA_DELIVERY_STORAGE_KEY)
+              }}
+              placeholder="Київ"
+              value={city}
+            />
+            {loadingCities && <p className="text-sm">Searching cities…</p>}
+            {citySuggestions.length > 0 && (
+              <ul
+                className="bg-background absolute top-full z-20 mt-1 max-h-60 w-full overflow-auto rounded-md border shadow-md"
+                id="nova-poshta-city-suggestions"
+                role="listbox"
+              >
+                {citySuggestions.map((suggestion) => (
+                  <li key={suggestion.ref} role="option">
+                    <button
+                      className="hover:bg-accent focus:bg-accent w-full px-3 py-2 text-left"
+                      onClick={(event) => {
+                        event.preventDefault()
+                        setCity(suggestion.description)
+                        setSelectedCity(suggestion)
+                        setCitySuggestions([])
+                        setOfficeSearch('')
+                        setOfficeSelected(false)
+                        onChange(undefined)
+                      }}
+                      type="button"
+                    >
+                      {[suggestion.settlementTypeDescription, suggestion.description]
+                        .filter(Boolean)
+                        .join(' ')}
+                      {suggestion.areaDescription ? `, ${suggestion.areaDescription} область` : ''}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <div className="relative flex flex-col gap-2">
+            <Label htmlFor="nova-poshta-office">Відділення/поштомат</Label>
+            <Input
+              aria-autocomplete="list"
+              aria-controls="nova-poshta-office-suggestions"
+              aria-expanded={officeFocused && !officeSelected && warehouses.length > 0}
+              disabled={disabled || !selectedCity}
+              id="nova-poshta-office"
+              onBlur={() => setOfficeFocused(false)}
+              onChange={(event) => {
+                setOfficeSearch(event.target.value)
+                setOfficeSelected(false)
+                onChange(undefined)
+                sessionStorage.removeItem(NOVA_POSHTA_DELIVERY_STORAGE_KEY)
+              }}
+              onFocus={() => setOfficeFocused(true)}
+              placeholder="Type office number or address"
+              value={officeSearch}
+            />
+            {officeFocused && !officeSelected && warehouses.length > 0 && (
+              <ul
+                className="bg-background absolute top-full z-20 mt-1 max-h-60 w-full overflow-auto rounded-md border shadow-md"
+                id="nova-poshta-office-suggestions"
+                role="listbox"
+              >
+                {warehouses.map((warehouse) => (
+                  <li key={warehouse.ref} role="option">
+                    <button
+                      className="hover:bg-accent focus:bg-accent w-full px-3 py-2 text-left"
+                      onClick={(event) => {
+                        event.preventDefault()
+                        const delivery = {
+                          provider: 'nova-poshta',
+                          serviceType: 'WarehouseWarehouse',
+                          warehouse,
+                        } satisfies NovaPoshtaDelivery
 
-                      setOfficeSearch(`№${warehouse.number} — ${warehouse.shortAddress}`)
-                      setOfficeSelected(true)
-                      setOfficeFocused(false)
-                      setWarehouses([])
-                      onChange(delivery)
-                      sessionStorage.setItem(
-                        NOVA_POSHTA_DELIVERY_STORAGE_KEY,
-                        JSON.stringify(delivery),
-                      )
-                    }}
-                    onMouseDown={(event) => event.preventDefault()}
-                    type="button"
-                  >
-                    {warehouse.description} — {warehouse.shortAddress}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+                        setOfficeSearch(`№${warehouse.number} — ${warehouse.shortAddress}`)
+                        setOfficeSelected(true)
+                        setOfficeFocused(false)
+                        setWarehouses([])
+                        onChange(delivery)
+                        sessionStorage.setItem(
+                          NOVA_POSHTA_DELIVERY_STORAGE_KEY,
+                          JSON.stringify(delivery),
+                        )
+                      }}
+                      onMouseDown={(event) => event.preventDefault()}
+                      type="button"
+                    >
+                      {warehouse.description} — {warehouse.shortAddress}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
+        {error && <Message error={error} />}
+        {loadingWarehouses && <p className="text-sm">Loading offices…</p>}
+        {value && (
+          <p className="text-sm">
+            Selected: {value.warehouse.description}, {value.warehouse.shortAddress}
+          </p>
+        )}
       </div>
-      {error && <Message error={error} />}
-      {loadingWarehouses && <p className="text-sm">Loading offices…</p>}
-      {value && (
-        <p className="text-sm">
-          Selected: {value.warehouse.description}, {value.warehouse.shortAddress}
-        </p>
-      )}
     </section>
   )
 }

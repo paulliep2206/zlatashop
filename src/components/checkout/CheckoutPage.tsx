@@ -6,16 +6,11 @@ import { Price } from '@/components/Price'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useTheme } from '@/providers/Theme'
-import { Elements } from '@stripe/react-stripe-js'
-import { loadStripe } from '@stripe/stripe-js'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import React, { Suspense, useCallback, useMemo, useState } from 'react'
+import React, { useCallback, useMemo, useState } from 'react'
 
-import { cssVariables } from '@/cssVariables'
-import { CheckoutForm } from '@/components/forms/CheckoutForm'
-import { useCart, usePayments } from '@payloadcms/plugin-ecommerce/client/react'
+import { useCart } from '@payloadcms/plugin-ecommerce/client/react'
 import { Address } from '@/payload-types'
 import { FormItem } from '@/components/forms/FormItem'
 import { toast } from 'sonner'
@@ -23,9 +18,13 @@ import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { NovaPoshtaOfficeSelector } from './NovaPoshtaOfficeSelector'
 import type { NovaPoshtaDelivery } from '@/integrations/nova-poshta/types'
 import { getProductPrice } from '@/lib/pricing'
+import { WayForPayPayment } from './WayForPayPayment'
 
-const apiKey = `${process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}`
-const stripe = loadStripe(apiKey)
+type PaymentData = {
+  orderReference: string
+  publicToken: string
+  widget: Record<string, unknown> & { orderReference: string }
+}
 
 type ContactInformation = Pick<Address, 'fatherName' | 'firstName' | 'lastName' | 'phone'>
 
@@ -33,14 +32,12 @@ export const CheckoutPage: React.FC = () => {
   const router = useRouter()
   const { cart } = useCart()
   const [error, setError] = useState<null | string>(null)
-  const { theme } = useTheme()
   /**
    * State to manage the checkout email input.
    */
   const [email, setEmail] = useState('')
   const [emailEditable, setEmailEditable] = useState(true)
-  const [paymentData, setPaymentData] = useState<null | Record<string, unknown>>(null)
-  const { initiatePayment } = usePayments()
+  const [paymentData, setPaymentData] = useState<PaymentData | null>(null)
   const [contactInformation, setContactInformation] = useState<ContactInformation>({
     fatherName: '',
     firstName: '',
@@ -80,36 +77,28 @@ export const CheckoutPage: React.FC = () => {
     contactInformationIsComplete && !emailEditable && shippingAddress && novaPoshtaDelivery,
   )
 
-  const initiatePaymentIntent = useCallback(
-    async (paymentID: string) => {
-      try {
-        const paymentData = (await initiatePayment(paymentID, {
-          additionalData: {
-            customerEmail: email.trim(),
-            billingAddress: shippingAddress,
-            shippingAddress,
-          },
-        })) as Record<string, unknown>
-
-        if (paymentData) {
-          setPaymentData(paymentData)
-        }
-      } catch (error) {
-        const errorData = error instanceof Error ? JSON.parse(error.message) : {}
-        let errorMessage = 'An error occurred while initiating payment.'
-
-        if (errorData?.cause?.code === 'OutOfStock') {
-          errorMessage = 'One or more items in your cart are out of stock.'
-        }
-
-        setError(errorMessage)
-        toast.error(errorMessage)
-      }
-    },
-    [email, initiatePayment, shippingAddress],
-  )
-
-  if (!stripe) return null
+  const initiatePaymentIntent = useCallback(async () => {
+    try {
+      if (!cart?.id || !shippingAddress || !novaPoshtaDelivery) return
+      const response = await fetch('/api/wayforpay/initiate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cartID: cart.id,
+          customerEmail: email.trim(),
+          shippingAddress,
+          novaPoshtaDelivery,
+        }),
+      })
+      const result = (await response.json()) as PaymentData & { error?: string }
+      if (!response.ok) throw new Error(result.error || 'Could not initiate payment.')
+      setPaymentData(result)
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Could not initiate payment.'
+      setError(errorMessage)
+      toast.error(errorMessage)
+    }
+  }, [cart?.id, email, novaPoshtaDelivery, shippingAddress])
 
   if (cartIsEmpty && isProcessingPayment) {
     return (
@@ -134,14 +123,12 @@ export const CheckoutPage: React.FC = () => {
   return (
     <div className="flex flex-col items-stretch justify-stretch my-8 md:flex-row grow gap-10 md:gap-6 lg:gap-8">
       <div className="basis-full lg:basis-2/3 flex flex-col gap-8 justify-stretch">
-        <h2 className="font-medium text-3xl">Contact</h2>
-        <div className="bg-accent dark:bg-black rounded-lg p-4 ">
+        <h2 className="font-medium text-3xl">Контактна інформація</h2>
+        <div className="bg-primary/5 rounded-lg p-4 ">
           <div>
-            <p className="mb-4">Enter your contact information to continue to checkout.</p>
-
             <div className="grid gap-4 mb-6 md:grid-cols-2">
               <FormItem>
-                <Label htmlFor="firstName">First name*</Label>
+                <Label htmlFor="firstName">Імʼя*</Label>
                 <Input
                   disabled={!emailEditable}
                   id="firstName"
@@ -158,7 +145,7 @@ export const CheckoutPage: React.FC = () => {
               </FormItem>
 
               <FormItem>
-                <Label htmlFor="lastName">Last name*</Label>
+                <Label htmlFor="lastName">Прізвище*</Label>
                 <Input
                   disabled={!emailEditable}
                   id="lastName"
@@ -175,7 +162,7 @@ export const CheckoutPage: React.FC = () => {
               </FormItem>
 
               <FormItem>
-                <Label htmlFor="fatherName">Father name</Label>
+                <Label htmlFor="fatherName">По-батькові</Label>
                 <Input
                   disabled={!emailEditable}
                   id="fatherName"
@@ -191,7 +178,7 @@ export const CheckoutPage: React.FC = () => {
               </FormItem>
 
               <FormItem>
-                <Label htmlFor="phone">Phone number*</Label>
+                <Label htmlFor="phone">Телефон*</Label>
                 <Input
                   autoComplete="tel"
                   disabled={!emailEditable}
@@ -211,7 +198,7 @@ export const CheckoutPage: React.FC = () => {
             </div>
 
             <FormItem className="mb-6">
-              <Label htmlFor="email">Email Address</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
                 disabled={!emailEditable}
                 id="email"
@@ -247,14 +234,14 @@ export const CheckoutPage: React.FC = () => {
             disabled={!canGoToPayment}
             onClick={(e) => {
               e.preventDefault()
-              void initiatePaymentIntent('stripe')
+              void initiatePaymentIntent()
             }}
           >
-            Go to payment
+            Оплатити
           </Button>
         )}
 
-        {!paymentData?.['clientSecret'] && error && (
+        {!paymentData && error && (
           <div className="my-8">
             <Message error={error} />
 
@@ -270,58 +257,13 @@ export const CheckoutPage: React.FC = () => {
           </div>
         )}
 
-        <Suspense fallback={<React.Fragment />}>
-          {/* @ts-ignore */}
-          {paymentData && paymentData?.['clientSecret'] && (
-            <div className="pb-16">
-              <h2 className="font-medium text-3xl">Payment</h2>
-              {error && <p>{`Error: ${error}`}</p>}
-              <Elements
-                options={{
-                  appearance: {
-                    theme: 'stripe',
-                    variables: {
-                      borderRadius: '6px',
-                      colorPrimary: '#858585',
-                      gridColumnSpacing: '20px',
-                      gridRowSpacing: '20px',
-                      colorBackground: theme === 'dark' ? '#0a0a0a' : cssVariables.colors.base0,
-                      colorDanger: cssVariables.colors.error500,
-                      colorDangerText: cssVariables.colors.error500,
-                      colorIcon:
-                        theme === 'dark' ? cssVariables.colors.base0 : cssVariables.colors.base1000,
-                      colorText: theme === 'dark' ? '#858585' : cssVariables.colors.base1000,
-                      colorTextPlaceholder: '#858585',
-                      fontFamily: 'Geist, sans-serif',
-                      fontSizeBase: '16px',
-                      fontWeightBold: '600',
-                      fontWeightNormal: '500',
-                      spacingUnit: '4px',
-                    },
-                  },
-                  clientSecret: paymentData['clientSecret'] as string,
-                }}
-                stripe={stripe}
-              >
-                <div className="flex flex-col gap-8">
-                  <CheckoutForm
-                    customerEmail={email.trim()}
-                    billingAddress={shippingAddress}
-                    novaPoshtaDelivery={novaPoshtaDelivery}
-                    setProcessingPayment={setProcessingPayment}
-                  />
-                  <Button
-                    variant="ghost"
-                    className="self-start"
-                    onClick={() => setPaymentData(null)}
-                  >
-                    Cancel payment
-                  </Button>
-                </div>
-              </Elements>
-            </div>
-          )}
-        </Suspense>
+        {paymentData && (
+          <WayForPayPayment
+            data={paymentData}
+            onCancel={() => setPaymentData(null)}
+            setProcessingPayment={setProcessingPayment}
+          />
+        )}
       </div>
 
       {!cartIsEmpty && (

@@ -1,11 +1,11 @@
 import { AuthProvider } from '@/providers/Auth'
 import { EcommerceProvider } from '@payloadcms/plugin-ecommerce/client/react'
-import { stripeAdapterClient } from '@payloadcms/plugin-ecommerce/payments/stripe'
 import React from 'react'
 
 import { HeaderThemeProvider } from './HeaderTheme'
 import { ThemeProvider } from './Theme'
 import { SonnerProvider } from '@/providers/Sonner'
+import { UAH_CURRENCIES_CONFIG } from '@/lib/currency'
 
 export const Providers: React.FC<{
   children: React.ReactNode
@@ -16,7 +16,7 @@ export const Providers: React.FC<{
         <HeaderThemeProvider>
           <SonnerProvider />
           <EcommerceProvider
-            enableVariants={true}
+            currenciesConfig={UAH_CURRENCIES_CONFIG}
             api={{
               cartsFetchQuery: {
                 depth: 2,
@@ -30,18 +30,9 @@ export const Providers: React.FC<{
                     price: true,
                     specialPrice: true,
                   },
-                  variants: {
-                    title: true,
-                    inventory: true,
-                  },
                 },
               },
             }}
-            paymentMethods={[
-              stripeAdapterClient({
-                publishableKey: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '',
-              }),
-            ]}
           >
             {children}
           </EcommerceProvider>

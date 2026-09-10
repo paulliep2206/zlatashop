@@ -1,16 +1,12 @@
 import { Media } from '@/components/Media'
-import { OrderStatus } from '@/components/OrderStatus'
 import { Price } from '@/components/Price'
-import { Button } from '@/components/ui/button'
-import { Media as MediaType, Order, Product, Variant } from '@/payload-types'
-import { formatDateTime } from '@/utilities/formatDateTime'
+import { Product } from '@/payload-types'
 import Link from 'next/link'
 import { getProductPrice } from '@/lib/pricing'
 
 type Props = {
   product: Product
   style?: 'compact' | 'default'
-  variant?: Variant
   quantity?: number
   /**
    * Force all formatting to a particular currency.
@@ -22,7 +18,6 @@ export const ProductItem: React.FC<Props> = ({
   product,
   style = 'default',
   quantity,
-  variant,
   currencyCode,
 }) => {
   const { title } = product
@@ -33,31 +28,10 @@ export const ProductItem: React.FC<Props> = ({
   const firstGalleryImage =
     typeof product.gallery?.[0]?.image !== 'string' ? product.gallery?.[0]?.image : undefined
 
-  let image = firstGalleryImage || metaImage
-
-  const isVariant = Boolean(variant) && typeof variant === 'object'
-
-  if (isVariant) {
-    const imageVariant = product.gallery?.find((item) => {
-      if (!item.variantOption) return false
-      const variantOptionID =
-        typeof item.variantOption === 'object' ? item.variantOption.id : item.variantOption
-
-      const hasMatch = variant?.options?.some((option) => {
-        if (typeof option === 'object') return option.id === variantOptionID
-        else return option === variantOptionID
-      })
-
-      return hasMatch
-    })
-
-    if (imageVariant && typeof imageVariant.image !== 'string') {
-      image = imageVariant.image
-    }
-  }
+  const image = firstGalleryImage || metaImage
 
   const itemPrice = getProductPrice(product)
-  const itemURL = `/products/${product.slug}${variant ? `?variant=${variant.id}` : ''}`
+  const itemURL = `/products/${product.slug}`
 
   return (
     <div className="flex items-center gap-4">
@@ -73,16 +47,6 @@ export const ProductItem: React.FC<Props> = ({
           <p className="font-medium text-lg">
             <Link href={itemURL}>{title}</Link>
           </p>
-          {variant && (
-            <p className="text-sm font-mono text-primary/50 tracking-widest">
-              {variant.options
-                ?.map((option) => {
-                  if (typeof option === 'object') return option.label
-                  return null
-                })
-                .join(', ')}
-            </p>
-          )}
           <div>
             {'x'}
             {quantity}
