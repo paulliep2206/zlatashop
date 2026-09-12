@@ -1,7 +1,10 @@
 import config from '@payload-config'
 import { createLocalReq, getPayload } from 'payload'
 
-import { createWayForPayPayment } from '@/integrations/wayforpay/initiate'
+import {
+  createWayForPayPayment,
+  getPaymentInitiationError,
+} from '@/integrations/wayforpay/initiate'
 import { parseInitiateInput } from '@/integrations/wayforpay/validation'
 
 export async function POST(request: Request): Promise<Response> {
@@ -15,9 +18,7 @@ export async function POST(request: Request): Promise<Response> {
     })
     return Response.json(result)
   } catch (error) {
-    return Response.json(
-      { error: error instanceof Error ? error.message : 'Could not initiate payment.' },
-      { status: 400 },
-    )
+    const { body, status } = getPaymentInitiationError(error)
+    return Response.json(body, { status })
   }
 }

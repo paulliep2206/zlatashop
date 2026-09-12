@@ -6,6 +6,16 @@ export type WayForPayConfig = {
   serverUrl: string
 }
 
+export type WayForPayRolloutConfig = {
+  allowMixedCarts: boolean
+  allowVirtualOnlyCarts: boolean
+}
+
+export const getWayForPayRolloutConfig = (): WayForPayRolloutConfig => ({
+  allowMixedCarts: process.env.WAYFORPAY_ENABLE_MIXED_CARTS === 'true',
+  allowVirtualOnlyCarts: process.env.WAYFORPAY_ENABLE_VIRTUAL_ONLY_CARTS === 'true',
+})
+
 export const getWayForPayConfig = (): WayForPayConfig => {
   const merchantAccount = process.env.WAYFORPAY_MERCHANT_ACCOUNT?.trim()
   const merchantDomainName = process.env.WAYFORPAY_MERCHANT_DOMAIN?.trim()

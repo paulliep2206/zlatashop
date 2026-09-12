@@ -90,6 +90,7 @@ export const plugins: Plugin[] = [
     },
     currencies: UAH_CURRENCIES_CONFIG,
     carts: {
+      allowGuestCarts: true,
       cartsCollectionOverride: ({ defaultCollection }) => ({
         ...defaultCollection,
         hooks: {

@@ -10,6 +10,7 @@ export type WayForPayItemSnapshot = {
 
 export type InitiateWayForPayInput = {
   cartID: number
+  cartSecret?: string
   customerEmail: string
   shippingAddress: Partial<Address>
   novaPoshtaDelivery: NovaPoshtaDelivery

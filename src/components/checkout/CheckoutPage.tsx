@@ -85,6 +85,7 @@ export const CheckoutPage: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           cartID: cart.id,
+          cartSecret: window.localStorage.getItem('cart_secret') || undefined,
           customerEmail: email.trim(),
           shippingAddress,
           novaPoshtaDelivery,

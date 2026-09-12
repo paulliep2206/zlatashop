@@ -8,7 +8,10 @@ import {
   toMinorAmount,
 } from '@/integrations/wayforpay/amount'
 import { applyWayForPayResult, finalizeWayForPayOrder } from '@/integrations/wayforpay/finalize'
-import { createWayForPayPayment } from '@/integrations/wayforpay/initiate'
+import {
+  createWayForPayPayment,
+  getPaymentInitiationError,
+} from '@/integrations/wayforpay/initiate'
 import {
   createCallbackAcknowledgement,
   signCallback,
@@ -147,31 +150,55 @@ describe('WayForPay initiation', () => {
     process.env = { ...originalEnv }
   })
 
-  it('reprices the stored cart and enables only card and wallet methods', async () => {
-    const payload = {
-      findByID: vi.fn(async ({ collection, id }: { collection: string; id: number }) => {
-        if (collection === 'carts') {
-          return {
-            id: 7,
-            items: [
-              { product: 10, quantity: 2 },
-              { product: 11, quantity: 1 },
-            ],
-          }
-        }
-        return id === 10
-          ? { id, title: 'Regular book', price: 500 }
-          : { id, title: 'Sale book', price: 900, specialPrice: 650 }
-      }),
-      create: vi.fn(async ({ data }) => ({ id: 99, ...data })),
-    }
+  const physicalProduct = (id: number, overrides: Record<string, unknown> = {}) => ({
+    id,
+    title: `Book ${id}`,
+    _status: 'published',
+    productType: 'simple',
+    price: 500,
+    stock: 10,
+    stockStatus: 'in_stock',
+    ...overrides,
+  })
+
+  const makePayload = ({
+    cart = { id: 7, customer: 3, items: [{ product: 10, quantity: 2 }] },
+    products = { 10: physicalProduct(10) } as Record<number, Record<string, unknown>>,
+    authorize = true,
+  }: any = {}) => ({
+    find: vi.fn(async () => ({ docs: authorize ? [cart] : [] })),
+    findByID: vi.fn(async ({ id }: { id: number }) => {
+      const product = products[id]
+      if (!product) throw new Error('not found')
+      return product
+    }),
+    create: vi.fn(async ({ data }) => ({ id: 99, ...data })),
+  })
+
+  const ownerReq = { user: { id: 3, roles: ['customer'] }, context: {} } as never
+
+  it('authorizes the owner, reprices stored physical products, and preserves widget snapshots', async () => {
+    const payload = makePayload({
+      cart: {
+        id: 7,
+        customer: 3,
+        items: [
+          { product: 10, quantity: 2 },
+          { product: 11, quantity: 1 },
+        ],
+      },
+      products: {
+        10: physicalProduct(10, { title: 'Regular book' }),
+        11: physicalProduct(11, { title: 'Sale book', price: 900, specialPrice: 650 }),
+      },
+    })
     const input = parseInitiateInput({
       cartID: 7,
       customerEmail: 'ivan@example.com',
       shippingAddress: address,
       novaPoshtaDelivery: delivery,
     })
-    const result = await createWayForPayPayment({ input, payload: payload as never })
+    const result = await createWayForPayPayment({ input, payload: payload as never, req: ownerReq })
 
     expect(result.widget.amount).toBe('1650.00')
     expect(result.widget.productPrice).toEqual(['500.00', '650.00'])
@@ -179,14 +206,235 @@ describe('WayForPay initiation', () => {
     expect(payload.create).toHaveBeenCalledWith(
       expect.objectContaining({
         collection: 'wayforpay-payments',
+        overrideAccess: true,
         data: expect.objectContaining({
           amountMinor: 165000,
           currency: 'UAH',
           status: 'pending',
+          customer: 3,
+          customerEmail: 'ivan@example.com',
+          shippingAddressSnapshot: address,
+          novaPoshtaDeliverySnapshot: delivery,
         }),
       }),
     )
+    expect(payload.find).toHaveBeenCalledWith(expect.objectContaining({ overrideAccess: false }))
+    expect(payload.findByID).toHaveBeenCalledWith(
+      expect.objectContaining({
+        collection: 'products',
+        overrideAccess: true,
+      }),
+    )
     expect(verifyCallbackSignature(callback(), secret)).toBe(true)
+  })
+
+  it('authorizes a physical guest only through the secret-scoped Payload request', async () => {
+    const payload = makePayload({
+      cart: { id: 7, customer: null, items: [{ product: 10, quantity: 1 }] },
+    })
+    const input = parseInitiateInput({
+      cartID: 7,
+      cartSecret: 'a'.repeat(40),
+      customerEmail: 'guest@example.com',
+      shippingAddress: address,
+      novaPoshtaDelivery: delivery,
+    })
+
+    await createWayForPayPayment({
+      input,
+      payload: payload as never,
+      req: { user: null, context: {} } as never,
+    })
+
+    expect(payload.find).toHaveBeenCalledWith(
+      expect.objectContaining({
+        overrideAccess: false,
+        req: expect.objectContaining({ user: null, context: { cartSecret: 'a'.repeat(40) } }),
+      }),
+    )
+    expect(payload.create).toHaveBeenCalledOnce()
+  })
+
+  it.each([
+    ['another customer cart', { user: { id: 4, roles: ['customer'] } }, undefined],
+    ['guest cart without a secret', { user: null }, undefined],
+    ['guest cart with a wrong secret', { user: null }, 'wrong-secret'],
+    ['guessed cart ID', { user: null }, 'guessed-secret'],
+    ['admin session for another customer cart', { user: { id: 1, roles: ['admin'] } }, undefined],
+  ])('generically denies %s before payment creation', async (_label, request, cartSecret) => {
+    const payload = makePayload({ authorize: false })
+    const input = parseInitiateInput({
+      cartID: 7,
+      cartSecret,
+      customerEmail: 'ivan@example.com',
+      shippingAddress: address,
+      novaPoshtaDelivery: delivery,
+    })
+
+    const error = await createWayForPayPayment({
+      input,
+      payload: payload as never,
+      req: { ...request, context: {} } as never,
+    }).catch((reason: unknown) => reason)
+    expect(error).toMatchObject({ name: 'CartAuthorizationError', message: 'Cart not found.' })
+    expect(getPaymentInitiationError(error)).toEqual({
+      body: { error: 'Cart not found.' },
+      status: 404,
+    })
+    expect(payload.create).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    [
+      'purchased cart',
+      { purchasedAt: '2026-01-01', items: [{ product: 10, quantity: 1 }] },
+      physicalProduct(10),
+    ],
+    ['empty cart', { items: [] }, physicalProduct(10)],
+    ['zero quantity', { items: [{ product: 10, quantity: 0 }] }, physicalProduct(10)],
+    ['fractional quantity', { items: [{ product: 10, quantity: 1.5 }] }, physicalProduct(10)],
+    ['missing product', { items: [{ product: 999, quantity: 1 }] }, undefined],
+    [
+      'draft product',
+      { items: [{ product: 10, quantity: 1 }] },
+      physicalProduct(10, { _status: 'draft' }),
+    ],
+    [
+      'out-of-stock product',
+      { items: [{ product: 10, quantity: 1 }] },
+      physicalProduct(10, { stockStatus: 'out_stock' }),
+    ],
+    [
+      'missing stock status',
+      { items: [{ product: 10, quantity: 1 }] },
+      physicalProduct(10, { stockStatus: null }),
+    ],
+    ['zero stock', { items: [{ product: 10, quantity: 1 }] }, physicalProduct(10, { stock: 0 })],
+    [
+      'insufficient stock',
+      { items: [{ product: 10, quantity: 2 }] },
+      physicalProduct(10, { stock: 1 }),
+    ],
+    [
+      'unknown product type',
+      { items: [{ product: 10, quantity: 1 }] },
+      physicalProduct(10, { productType: 'unknown' }),
+    ],
+    ['zero price', { items: [{ product: 10, quantity: 1 }] }, physicalProduct(10, { price: 0 })],
+    [
+      'fractional minor price',
+      { items: [{ product: 10, quantity: 1 }] },
+      physicalProduct(10, { price: 4.501 }),
+    ],
+  ])('rejects %s before payment creation', async (_label, cartOverrides, product) => {
+    const products: Record<number, Record<string, unknown>> = product ? { 10: product } : {}
+    const payload = makePayload({
+      cart: { id: 7, customer: 3, ...cartOverrides },
+      products,
+    })
+    const input = parseInitiateInput({
+      cartID: 7,
+      customerEmail: 'ivan@example.com',
+      shippingAddress: address,
+      novaPoshtaDelivery: delivery,
+    })
+
+    await expect(
+      createWayForPayPayment({ input, payload: payload as never, req: ownerReq }),
+    ).rejects.toThrow('Could not initiate payment.')
+    expect(payload.create).not.toHaveBeenCalled()
+  })
+
+  it('uses server product state instead of client-supplied cart metadata', async () => {
+    const payload = makePayload({
+      cart: {
+        id: 7,
+        customer: 3,
+        items: [
+          {
+            product: {
+              id: 10,
+              price: 1,
+              specialPrice: 1,
+              productType: 'virtual',
+              _status: 'draft',
+              stock: 0,
+            },
+            quantity: 1,
+          },
+        ],
+      },
+      products: { 10: physicalProduct(10, { price: 700 }) },
+    })
+    const input = parseInitiateInput({
+      cartID: 7,
+      customerID: 999,
+      customerEmail: 'ivan@example.com',
+      shippingAddress: address,
+      novaPoshtaDelivery: delivery,
+    })
+
+    const result = await createWayForPayPayment({ input, payload: payload as never, req: ownerReq })
+    expect(result.widget.productPrice).toEqual(['700.00'])
+  })
+
+  it.each([
+    [
+      'virtual-only',
+      [{ product: 10, quantity: 1 }],
+      { 10: physicalProduct(10, { productType: 'virtual' }) },
+    ],
+    [
+      'mixed',
+      [
+        { product: 10, quantity: 1 },
+        { product: 11, quantity: 1 },
+      ],
+      {
+        10: physicalProduct(10, { productType: 'virtual' }),
+        11: physicalProduct(11),
+      },
+    ],
+  ])(
+    'rejects %s carts while its server rollout gate is disabled',
+    async (_label, items, products) => {
+      const payload = makePayload({ cart: { id: 7, customer: null, items }, products })
+      const input = parseInitiateInput({
+        cartID: 7,
+        cartSecret: 'a'.repeat(40),
+        customerEmail: 'ivan@example.com',
+        shippingAddress: address,
+        novaPoshtaDelivery: delivery,
+      })
+
+      await expect(
+        createWayForPayPayment({
+          input,
+          payload: payload as never,
+          req: { user: null, context: {} } as never,
+        }),
+      ).rejects.toThrow('Could not initiate payment.')
+      expect(payload.create).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each([
+    ['customer email', { customerEmail: '' }],
+    ['first name', { shippingAddress: { ...address, firstName: '' } }],
+    ['last name', { shippingAddress: { ...address, lastName: '' } }],
+    ['phone', { shippingAddress: { ...address, phone: '' } }],
+    ['shipping address', { shippingAddress: { ...address, addressLine1: '' } }],
+    ['Nova Poshta selection', { novaPoshtaDelivery: undefined }],
+  ])('rejects missing or invalid %s while parsing', (_label, override) => {
+    expect(() =>
+      parseInitiateInput({
+        cartID: 7,
+        customerEmail: 'ivan@example.com',
+        shippingAddress: address,
+        novaPoshtaDelivery: delivery,
+        ...override,
+      }),
+    ).toThrow()
   })
 })
 

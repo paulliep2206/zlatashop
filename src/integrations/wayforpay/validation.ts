@@ -21,6 +21,10 @@ export const parseInitiateInput = (value: unknown): InitiateWayForPayInput => {
   const input = value as Record<string, unknown>
   const cartID = Number(input.cartID)
   if (!Number.isSafeInteger(cartID) || cartID <= 0) throw new Error('A valid cart is required.')
+  const cartSecret =
+    typeof input.cartSecret === 'string' && input.cartSecret.length > 0
+      ? input.cartSecret
+      : undefined
 
   const customerEmail = requireString(input.customerEmail, 'Customer email')
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) {
@@ -44,6 +48,7 @@ export const parseInitiateInput = (value: unknown): InitiateWayForPayInput => {
 
   return {
     cartID,
+    cartSecret,
     customerEmail,
     shippingAddress,
     novaPoshtaDelivery: parseDelivery(input.novaPoshtaDelivery),
