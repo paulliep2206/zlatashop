@@ -36,8 +36,10 @@ These states are separate and must not be inferred from one another:
   tooling and runbook, but no staging-copy or production operation.
 - **Local implementation readiness** means the frozen commit and dependency lock are recorded; an
   isolated PostgreSQL target is positively identified; automatic push and destructive database
-  switches are disabled for migration commands; and the committed baseline, comparison tooling,
-  runbook, and local tests have passed review. It does not authorize use of production credentials.
+  switches are disabled for migration commands; and the candidate baseline, comparison tooling,
+  runbook, and local tests have passed review. It does not require production inventory or
+  production-copy evidence, does not establish that the candidate matches production, and does not
+  authorize use of staging or production credentials.
 - **Production execution readiness** additionally requires the named operator and reviewer, target
   identifiers, production inventory, tested backups, production-copy rehearsal, clean comparisons,
   approved command transcript, maintenance/concurrency controls, and an explicit production
@@ -45,6 +47,39 @@ These states are separate and must not be inferred from one another:
 
 Changing this specification to Approved establishes only specification readiness. Changing it to
 Implemented requires all three states and the final evidence approval described below.
+
+## Phased execution gates
+
+The work proceeds through four explicit phases. Completion of a later phase must not be inferred
+from an earlier phase, and no phase authorizes work assigned to a later phase.
+
+1. **Local candidate baseline.** After specification approval, freeze the repository commit and
+   dependency lock, configure `push: false` and an explicit migration directory, and positively
+   identify an empty, disposable local PostgreSQL target. Local tooling, runbook scaffolding,
+   candidate baseline generation, empty-database reconstruction, migration-status checks,
+   application boot/read smoke tests, schema-dump normalization tooling, and local regression tests
+   may proceed without production inventory, backups, or production-copy evidence. No staging,
+   production, restored-production-copy, or production-derived credential or data may be used. The
+   generated migration is a **candidate** until phase 2 proves equivalence; it must not be stamped or
+   applied outside an empty disposable local database, and no post-baseline feature migration may be
+   generated.
+2. **Production inventory and backup verification.** Named operator/reviewer assignments,
+   read-only production inventory, authoritative production schema capture, provider recovery point,
+   logical backup, isolated restore verification, drift classification, and comparison with the
+   phase-1 reconstruction are collected and approved. Any drift may require regenerating and
+   re-reviewing the candidate in phase 1. This phase authorizes no production write and no
+   production-copy ledger rehearsal.
+3. **Production-copy rehearsal.** Only after phase 2 approval, rehearse the exact reviewed ledger
+   procedure, rollback/recovery, migration status, schema/data invariance checks, and regressions on
+   a fresh isolated production copy. This phase authorizes no staging or production write.
+4. **Separately approved production execution.** Only after phase 3 approval and a fresh explicit
+   production change authorization, perform the reviewed ledger-only production transaction and
+   read-only verification. Baseline DDL and all destructive migration commands remain prohibited in
+   production.
+
+Phase 1 produces local implementation readiness only. `000a` remains incomplete, must not be marked
+Implemented, and cannot release 001a migration generation or application until phases 2–4 and final
+completion approval have succeeded.
 
 ## Authoritative schema and comparison rule
 
@@ -87,17 +122,18 @@ Implemented requires all three states and the final evidence approval described 
 
 ### Freeze and inventory
 
-- Name separate operator and reviewer people and record the target environment, application commit,
-  Payload and database-adapter versions, PostgreSQL version/extensions, resolved collection/global
-  slugs, and all environment switches that alter schema or plugin registration. Do not record
-  secrets.
-- Freeze feature-schema changes while the baseline is produced. `001a` and later feature migrations
-  cannot be generated against a moving configuration.
+- For phase 1, record the local environment classification, application commit, resolved dependency
+  lock, Payload and database-adapter versions, local PostgreSQL identity/version/extensions,
+  resolved collection/global slugs, and all local environment switches that alter schema or plugin
+  registration. Do not record secrets. Named production operator/reviewer assignments and the
+  production target record are phase-2 prerequisites, not phase-1 prerequisites.
+- Freeze feature-schema changes while the candidate baseline is produced. `001a` and later feature
+  migrations cannot be generated against a moving configuration or before all four phases complete.
 - Record and review the resolved `pnpm-lock.yaml`, Payload config, plugin registration, adapter
   options, `NODE_ENV`, `PAYLOAD_MIGRATING`, `PAYLOAD_DROP_DATABASE`, and the presence or absence of
   any deployment-supplied schema or migration command. An unknown deployment command or schema
   switch blocks execution.
-- Capture read-only production inventory: the Payload migration ledger if present, schemas, tables,
+- In phase 2, capture read-only production inventory: the Payload migration ledger if present, schemas, tables,
   columns, enums, sequences/identities, indexes, unique constraints, foreign keys and delete actions,
   views, functions/triggers, extensions, and approximate row counts. Record any object outside
   Payload ownership separately.
@@ -117,7 +153,8 @@ Implemented requires all three states and the final evidence approval described 
 
 ### Baseline construction and comparison
 
-- From the frozen pre-001a Payload configuration, generate and commit a baseline migration and its
+- In phase 1, from the frozen pre-001a Payload configuration, generate and commit a candidate
+  baseline migration and its
   Payload-generated schema snapshot/index in the repository's standard `src/migrations` directory.
   Preserve every generated artifact required by future `migrate:create` comparisons.
 - Run generation only in the local/clean-room environment, with no production credentials available
@@ -126,11 +163,12 @@ Implemented requires all three states and the final evidence approval described 
   empty database but must contain no operation intended to mutate, rename, truncate, or drop an
   existing production object. Its `down` is destructive by nature and is restricted to disposable
   local reconstruction tests; it is never a production rollback mechanism.
-- Apply the committed baseline to a new empty PostgreSQL database. Run `payload migrate:status`, boot
+- Apply the committed candidate baseline to a new empty local PostgreSQL database. Run
+  `payload migrate:status`, boot
   the frozen application, generate a schema-only dump, and execute representative API/read smoke
   tests. This empty-database reconstruction is the authoritative proof that a new environment can be
-  built only from committed migrations.
-- Take normalized schema-only dumps of production and the reconstructed database and compare tables,
+  built only from committed migrations, but it is not proof that the candidate matches production.
+- In phase 2, take normalized schema-only dumps of production and the reconstructed database and compare tables,
   columns/types/defaults/nullability, enums, sequences/identities, indexes, constraints, foreign-key
   actions, and Payload-owned functions/triggers. Normalization may ignore only reviewed
   environment-specific owners, grants, tablespaces, and extension installation metadata; every
@@ -186,13 +224,17 @@ Implemented requires all three states and the final evidence approval described 
 The named reviewer, who must not be the operator, signs each gate in the evidence artifact:
 
 1. **Specification approval:** approve this document before implementation begins.
-2. **Freeze and inventory approval:** approve the frozen commit/configuration, exact environment
-   classification, production inventory, drift classification, and non-Payload ownership list before
-   generating the baseline.
-3. **Backup/restore approval:** approve provider recovery-point and logical-backup evidence plus a
-   successful isolated restore before any migration-ledger write is rehearsed.
-4. **Artifact approval:** approve baseline migration/snapshot/index checksums, destructive-statement
-   review, empty-database reconstruction, and schema comparison before the production-copy rehearsal.
+2. **Local candidate approval:** approve the frozen commit/configuration, local environment
+   classification and target isolation, candidate migration/snapshot/index checksums,
+   destructive-statement review, empty-database reconstruction, and local test results. This gate may
+   be completed before production inventory or backup evidence exists and grants only local
+   implementation readiness.
+3. **Production inventory and backup/restore approval:** approve the production environment
+   classification, production inventory, drift classification, non-Payload ownership list, provider
+   recovery point, logical-backup evidence, and successful isolated restore. If comparison changes
+   the candidate artifacts, repeat gate 2 before proceeding.
+4. **Artifact comparison approval:** approve the final candidate artifact checksums and the
+   normalized production-to-reconstruction schema comparison before production-copy rehearsal.
 5. **Production-copy approval:** approve the exact ledger script and transcript, no-DDL proof,
    regressions, rollback, and recovery rehearsal on a fresh production copy.
 6. **Production change authorization:** immediately before execution, approve the named operator,
@@ -239,6 +281,7 @@ Do not commit database credentials, secrets, raw customer records, or an unsanit
 
 - Given the frozen pre-001a configuration, when the baseline is generated, then all required
   migration files, snapshots, and index artifacts are committed and their checksums are recorded.
+  Before phase-2 comparison and approval, these artifacts are a local candidate only.
 - Given a new empty PostgreSQL database, when only committed migrations are applied, then migration
   status is clean, the frozen application boots, the reconstructed schema matches the expected
   Payload schema, and representative reads pass.
@@ -272,6 +315,10 @@ Do not commit database credentials, secrets, raw customer records, or an unsanit
 - Given an Approved specification but incomplete operational evidence, when readiness is reported,
   then specification, local implementation, and production execution readiness are reported
   separately and neither approval nor local test success is represented as production authorization.
+- Given phases 2–4 have not begun or are incomplete, when phase 1 is performed, then candidate
+  baseline generation and empty-database validation are permitted only against a positively
+  identified disposable local target; staging, production, and production-copy access remain
+  prohibited, and `000a` remains incomplete.
 
 ## Out of scope
 

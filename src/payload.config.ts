@@ -45,9 +45,12 @@ export default buildConfig({
   },
   collections: [Users, Pages, Categories, Media, Attributes, WayForPayPayments],
   db: postgresAdapter({
+    migrationDir: path.resolve(dirname, 'migrations'),
     pool: {
       connectionString: process.env.DATABASE_URL || '',
     },
+    // Schema changes are migration-first. Local development push must be opted into explicitly.
+    push: process.env.NODE_ENV !== 'production' && process.env.PAYLOAD_DB_PUSH === 'true',
   }),
   editor: lexicalEditor({
     features: () => {

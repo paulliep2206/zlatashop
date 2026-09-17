@@ -6,6 +6,13 @@
   "type": "module",
   "scripts": {
     "build": "cross-env NODE_OPTIONS=\"--no-deprecation --max-old-space-size=8000\" next build",
+    "baseline:phase1:check": "node --import=tsx scripts/baseline/phase1.mjs check",
+    "baseline:phase1:create": "node --import=tsx scripts/baseline/phase1.mjs create",
+    "baseline:phase1:inventory": "node --import=tsx scripts/baseline/phase1.mjs inventory",
+    "baseline:phase1:migrate": "node --import=tsx scripts/baseline/phase1.mjs migrate",
+    "baseline:phase1:schema-check": "node --import=tsx scripts/baseline/phase1.mjs schema-check",
+    "baseline:phase1:smoke": "node --import=tsx scripts/baseline/phase1.mjs smoke",
+    "baseline:phase1:status": "node --import=tsx scripts/baseline/phase1.mjs status",
     "dev": "cross-env NODE_OPTIONS=--no-deprecation next dev",
     "dev:prod": "cross-env NODE_OPTIONS=--no-deprecation rm -rf .next && pnpm build && pnpm start",
     "generate:importmap": "cross-env NODE_OPTIONS=--no-deprecation payload generate:importmap",
