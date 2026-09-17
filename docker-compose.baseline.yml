@@ -1,0 +1,19 @@
+name: bookstore-baseline-phase1
+
+services:
+  postgres-baseline:
+    image: postgres:16-alpine
+    container_name: bookstore_baseline_phase1_pg16
+    environment:
+      POSTGRES_DB: bookstore_baseline_phase1
+      POSTGRES_PASSWORD: baseline_local_only
+      POSTGRES_USER: baseline_runner
+    ports:
+      - '127.0.0.1:55432:5432'
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U baseline_runner -d bookstore_baseline_phase1']
+      interval: 1s
+      timeout: 5s
+      retries: 30
