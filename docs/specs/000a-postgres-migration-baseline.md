@@ -1,6 +1,6 @@
 # PostgreSQL migration baseline
 
-Status: Approved
+Status: Implemented
 
 ## Goal
 
