@@ -43,6 +43,14 @@ export const Media: CollectionConfig = {
   upload: {
     staticDir: 'media',
     mimeTypes: ['image/*'],
+    modifyResponseHeaders: ({ headers }) => {
+      // Allow streamed files through when the storage adapter reports a zero length.
+      if (headers.get('content-length') === '0') {
+        headers.delete('content-length')
+      }
+
+      return headers
+    },
     // ─── ADD / UPDATE THIS DYNAMIC THUMBNAIL FUNCTION ───
     adminThumbnail: ({ doc }) => {
       // If the document has a direct cloud URL from Uploadthing, use it instantly
