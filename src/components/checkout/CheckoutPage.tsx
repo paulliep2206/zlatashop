@@ -77,14 +77,16 @@ export const CheckoutPage: React.FC = () => {
     contactInformationIsComplete && !emailEditable && shippingAddress && novaPoshtaDelivery,
   )
 
+  const cartID = cart?.id
+
   const initiatePaymentIntent = useCallback(async () => {
     try {
-      if (!cart?.id || !shippingAddress || !novaPoshtaDelivery) return
+      if (!cartID || !shippingAddress || !novaPoshtaDelivery) return
       const response = await fetch('/api/wayforpay/initiate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          cartID: cart.id,
+          cartID,
           customerEmail: email.trim(),
           shippingAddress,
           novaPoshtaDelivery,
@@ -98,7 +100,7 @@ export const CheckoutPage: React.FC = () => {
       setError(errorMessage)
       toast.error(errorMessage)
     }
-  }, [cart?.id, email, novaPoshtaDelivery, shippingAddress])
+  }, [cartID, email, novaPoshtaDelivery, shippingAddress])
 
   if (cartIsEmpty && isProcessingPayment) {
     return (
@@ -279,7 +281,7 @@ export const CheckoutPage: React.FC = () => {
 
               if (!quantity) return null
 
-              let image = gallery?.[0]?.image || meta?.image
+              const image = gallery?.[0]?.image || meta?.image
               const price = getProductPrice(product)
 
               return (

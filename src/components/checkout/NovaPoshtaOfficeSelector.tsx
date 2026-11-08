@@ -32,12 +32,14 @@ export const NovaPoshtaOfficeSelector: React.FC<Props> = ({ disabled, onChange, 
   const [loadingCities, setLoadingCities] = useState(false)
   const [loadingWarehouses, setLoadingWarehouses] = useState(false)
 
+  // Results from an earlier search stay in state but are hidden once they no longer apply.
+  const shouldSearchCities = !selectedCity && city.trim().length >= 2
+  const shouldLoadWarehouses = Boolean(selectedCity) && !officeSelected
+  const visibleCitySuggestions = shouldSearchCities ? citySuggestions : []
+  const visibleWarehouses = shouldLoadWarehouses ? warehouses : []
+
   useEffect(() => {
-    if (selectedCity || city.trim().length < 2) {
-      setCitySuggestions([])
-      setLoadingCities(false)
-      return
-    }
+    if (!shouldSearchCities) return
 
     const controller = new AbortController()
     const timeout = window.setTimeout(async () => {
@@ -75,13 +77,10 @@ export const NovaPoshtaOfficeSelector: React.FC<Props> = ({ disabled, onChange, 
       window.clearTimeout(timeout)
       controller.abort()
     }
-  }, [city, selectedCity])
+  }, [city, shouldSearchCities])
 
   useEffect(() => {
-    if (!selectedCity || officeSelected) {
-      setWarehouses([])
-      return
-    }
+    if (!selectedCity || officeSelected) return
 
     const controller = new AbortController()
     const timeout = window.setTimeout(
@@ -141,7 +140,7 @@ export const NovaPoshtaOfficeSelector: React.FC<Props> = ({ disabled, onChange, 
             <Input
               aria-autocomplete="list"
               aria-controls="nova-poshta-city-suggestions"
-              aria-expanded={citySuggestions.length > 0}
+              aria-expanded={visibleCitySuggestions.length > 0}
               disabled={disabled}
               id="nova-poshta-city"
               onChange={(event) => {
@@ -157,14 +156,14 @@ export const NovaPoshtaOfficeSelector: React.FC<Props> = ({ disabled, onChange, 
               placeholder="Київ"
               value={city}
             />
-            {loadingCities && <p className="text-sm">Searching cities…</p>}
-            {citySuggestions.length > 0 && (
+            {shouldSearchCities && loadingCities && <p className="text-sm">Searching cities…</p>}
+            {visibleCitySuggestions.length > 0 && (
               <ul
                 className="bg-background absolute top-full z-20 mt-1 max-h-60 w-full overflow-auto rounded-md border shadow-md"
                 id="nova-poshta-city-suggestions"
                 role="listbox"
               >
-                {citySuggestions.map((suggestion) => (
+                {visibleCitySuggestions.map((suggestion) => (
                   <li key={suggestion.ref} role="option">
                     <button
                       className="hover:bg-accent focus:bg-accent w-full px-3 py-2 text-left"
@@ -194,7 +193,7 @@ export const NovaPoshtaOfficeSelector: React.FC<Props> = ({ disabled, onChange, 
             <Input
               aria-autocomplete="list"
               aria-controls="nova-poshta-office-suggestions"
-              aria-expanded={officeFocused && !officeSelected && warehouses.length > 0}
+              aria-expanded={officeFocused && !officeSelected && visibleWarehouses.length > 0}
               disabled={disabled || !selectedCity}
               id="nova-poshta-office"
               onBlur={() => setOfficeFocused(false)}
@@ -208,13 +207,13 @@ export const NovaPoshtaOfficeSelector: React.FC<Props> = ({ disabled, onChange, 
               placeholder="Type office number or address"
               value={officeSearch}
             />
-            {officeFocused && !officeSelected && warehouses.length > 0 && (
+            {officeFocused && !officeSelected && visibleWarehouses.length > 0 && (
               <ul
                 className="bg-background absolute top-full z-20 mt-1 max-h-60 w-full overflow-auto rounded-md border shadow-md"
                 id="nova-poshta-office-suggestions"
                 role="listbox"
               >
-                {warehouses.map((warehouse) => (
+                {visibleWarehouses.map((warehouse) => (
                   <li key={warehouse.ref} role="option">
                     <button
                       className="hover:bg-accent focus:bg-accent w-full px-3 py-2 text-left"
@@ -248,7 +247,7 @@ export const NovaPoshtaOfficeSelector: React.FC<Props> = ({ disabled, onChange, 
           </div>
         </div>
         {error && <Message error={error} />}
-        {loadingWarehouses && <p className="text-sm">Loading offices…</p>}
+        {shouldLoadWarehouses && loadingWarehouses && <p className="text-sm">Loading offices…</p>}
         {value && (
           <p className="text-sm">
             Selected: {value.warehouse.description}, {value.warehouse.shortAddress}

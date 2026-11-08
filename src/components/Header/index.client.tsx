@@ -21,7 +21,10 @@ export function HeaderClient({ header, categories }: Props) {
   const menu = header.navItems || []
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const [openCategoryId, setOpenCategoryId] = useState<number | null>(null)
+  const routeKey = `${pathname}?${searchParams.toString()}`
+  // Remember the route a category menu was opened on, so it closes on navigation.
+  const [openCategory, setOpenCategory] = useState<{ id: number; route: string } | null>(null)
+  const openCategoryId = openCategory?.route === routeKey ? openCategory.id : null
   const categoryMenuRef = useRef<HTMLDivElement>(null)
 
   const segments = pathname.split('/').filter(Boolean)
@@ -31,7 +34,7 @@ export function HeaderClient({ header, categories }: Props) {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (categoryMenuRef.current && !categoryMenuRef.current.contains(event.target as Node)) {
-        setOpenCategoryId(null)
+        setOpenCategory(null)
       }
     }
 
@@ -41,10 +44,6 @@ export function HeaderClient({ header, categories }: Props) {
       document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [])
-
-  useEffect(() => {
-    setOpenCategoryId(null)
-  }, [pathname, searchParams])
 
   return (
     <header className="relative z-20">
@@ -83,8 +82,10 @@ export function HeaderClient({ header, categories }: Props) {
                       <button
                         type="button"
                         onClick={() => {
-                          setOpenCategoryId((current) =>
-                            current === category.id ? null : category.id,
+                          setOpenCategory(
+                            openCategoryId === category.id
+                              ? null
+                              : { id: category.id, route: routeKey },
                           )
                         }}
                         className={cn(
