@@ -7,16 +7,30 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import React, { useState } from 'react'
+import React, { useState, useSyncExternalStore } from 'react'
 
 import type { Theme } from '../types'
 
 import { useTheme } from '..'
 import { themeLocalStorageKey } from '../shared'
 
+const subscribeToStorage = (onChange: () => void) => {
+  window.addEventListener('storage', onChange)
+  return () => window.removeEventListener('storage', onChange)
+}
+const getStoredPreference = () => window.localStorage.getItem(themeLocalStorageKey) ?? 'auto'
+const getServerPreference = () => ''
+
 export const ThemeSelector: React.FC = () => {
   const { setTheme } = useTheme()
-  const [value, setValue] = useState('')
+  const storedPreference = useSyncExternalStore(
+    subscribeToStorage,
+    getStoredPreference,
+    getServerPreference,
+  )
+  // The user's pick in this tab wins until reload; otherwise show what is stored.
+  const [selected, setValue] = useState<string | null>(null)
+  const value = selected ?? storedPreference
 
   const onThemeChange = (themeToSet: Theme & 'auto') => {
     if (themeToSet === 'auto') {
@@ -27,11 +41,6 @@ export const ThemeSelector: React.FC = () => {
       setValue(themeToSet)
     }
   }
-
-  React.useEffect(() => {
-    const preference = window.localStorage.getItem(themeLocalStorageKey)
-    setValue(preference ?? 'auto')
-  }, [])
 
   return (
     <Select onValueChange={onThemeChange} value={value}>

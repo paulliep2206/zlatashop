@@ -14,7 +14,7 @@ import { ShoppingCart } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 
 import { DeleteItemButton } from './DeleteItemButton'
 import { EditItemQuantityButton } from './EditItemQuantityButton'
@@ -25,14 +25,11 @@ import { getProductPrice } from '@/lib/pricing'
 
 export function CartModal() {
   const { cart } = useCart()
-  const [isOpen, setIsOpen] = useState(false)
-
   const pathname = usePathname()
-
-  useEffect(() => {
-    // Close the cart modal when the pathname changes.
-    setIsOpen(false)
-  }, [pathname])
+  // Remember the path the cart was opened on, so it closes when the pathname changes.
+  const [openOnPath, setOpenOnPath] = useState<string | null>(null)
+  const isOpen = openOnPath === pathname
+  const setIsOpen = (open: boolean) => setOpenOnPath(open ? pathname : null)
 
   const totalQuantity = useMemo(() => {
     if (!cart || !cart.items || !cart.items.length) return undefined
@@ -77,8 +74,8 @@ export function CartModal() {
                       ? product.gallery?.[0]?.image
                       : undefined
 
-                  let image = firstGalleryImage || metaImage
-                  let price = getProductPrice(product)
+                  const image = firstGalleryImage || metaImage
+                  const price = getProductPrice(product)
 
                   return (
                     <li className="flex w-full flex-col" key={i}>

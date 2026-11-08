@@ -449,12 +449,12 @@ describe('NovaPoshtaOfficeSelector', () => {
     render(<NovaPoshtaOfficeSelector onChange={onChange} />)
     expect(screen.queryByRole('button', { name: /find offices/i })).toBeNull()
 
-    fireEvent.change(screen.getByLabelText('City'), { target: { value: 'Муз' } })
+    fireEvent.change(screen.getByLabelText('Місто'), { target: { value: 'Муз' } })
     expect(await screen.findByRole('option', { name: /Музичі/i })).toBeTruthy()
 
     fireEvent.click(screen.getByRole('button', { name: /Музичі/i }))
     await screen.findByText(/No Nova Poshta offices found/i)
-    const officeInput = screen.getByLabelText('Nova Poshta office')
+    const officeInput = screen.getByLabelText('Відділення/поштомат')
     fireEvent.focus(officeInput)
     fireEvent.change(officeInput, { target: { value: '1' } })
     expect(await screen.findByRole('option', { name: /Відділення №1/i })).toBeTruthy()

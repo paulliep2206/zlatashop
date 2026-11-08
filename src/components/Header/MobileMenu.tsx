@@ -17,7 +17,7 @@ import { getCategoryPath } from '@/utilities/getCategoryPath'
 import { ChevronRight, MenuIcon } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 import type { CategoryNavItem } from './types'
 
@@ -31,7 +31,14 @@ export function MobileMenu({ menu, categories }: Props) {
 
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const [isOpen, setIsOpen] = useState(false)
+  const routeKey = `${pathname}?${searchParams.toString()}`
+  // Remember the route the menu was opened on, so it closes on navigation.
+  const [openOnRoute, setOpenOnRoute] = useState<string | null>(null)
+  const isOpen = openOnRoute === routeKey
+  const setIsOpen = useCallback(
+    (open: boolean) => setOpenOnRoute(open ? routeKey : null),
+    [routeKey],
+  )
   const [openCategoryId, setOpenCategoryId] = useState<number | null>(null)
 
   const closeMobileMenu = () => setIsOpen(false)
@@ -44,11 +51,7 @@ export function MobileMenu({ menu, categories }: Props) {
     }
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
-  }, [isOpen])
-
-  useEffect(() => {
-    setIsOpen(false)
-  }, [pathname, searchParams])
+  }, [setIsOpen])
 
   return (
     <Sheet onOpenChange={setIsOpen} open={isOpen}>
