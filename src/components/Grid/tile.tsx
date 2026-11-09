@@ -1,7 +1,6 @@
 import type { Media as MediaType } from '@/payload-types'
 
 import { Media } from '@/components/Media'
-import { Label } from '@/components/Grid/Label'
 import clsx from 'clsx'
 import React from 'react'
 
@@ -37,6 +36,7 @@ export const GridTileImage: React.FC<Props> = ({
           imgClassName="h-full w-full object-cover"
           resource={props.media}
           width={80}
+          priority={active}
         />
       ) : null}
     </div>
