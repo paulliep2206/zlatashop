@@ -158,6 +158,7 @@ function RelatedProducts({ products }: { products: Product[] }) {
                   title: product.title,
                 }}
                 media={product.meta?.image as Media}
+                sizes="(min-width: 1376px) 263px, (min-width: 1024px) 20vw, (min-width: 768px) 25vw, (min-width: 640px) 33vw, (min-width: 475px) 50vw, 100vw"
               />
             </Link>
           </li>

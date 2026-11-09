@@ -289,7 +289,13 @@ export const CheckoutPage: React.FC = () => {
                   <div className="flex items-stretch justify-stretch h-20 w-20 p-2 rounded-lg border">
                     <div className="relative w-full h-full">
                       {image && typeof image !== 'string' && (
-                        <Media className="" fill imgClassName="rounded-lg" resource={image} />
+                        <Media
+                          className=""
+                          fill
+                          imgClassName="rounded-lg"
+                          resource={image}
+                          size="64px"
+                        />
                       )}
                     </div>
                   </div>

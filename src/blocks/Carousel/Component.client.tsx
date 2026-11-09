@@ -41,6 +41,7 @@ export const CarouselClient: React.FC<{ products: Product[] }> = ({ products }) 
                     title: product.title,
                   }}
                   media={product.meta?.image as Media}
+                  sizes="(min-width: 1376px) 443px, (min-width: 768px) 33vw, 67vw"
                 />
                 <div className="font-heading mt-4 uppercase  p-4">{product.title}</div>
               </div>

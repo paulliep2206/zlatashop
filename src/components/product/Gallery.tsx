@@ -23,6 +23,7 @@ export const Gallery: React.FC<Props> = ({ gallery }) => {
           className="w-full"
           fetchPriority="high"
           imgClassName="w-full rounded-lg"
+          size="(min-width: 1376px) 656px, (min-width: 1024px) 50vw, 100vw"
         />
       </div>
 
@@ -37,7 +38,11 @@ export const Gallery: React.FC<Props> = ({ gallery }) => {
                 key={`${item.image.id}-${i}`}
                 onClick={() => setCurrent(i)}
               >
-                <GridTileImage active={i === current} media={item.image} />
+                <GridTileImage
+                  active={i === current}
+                  media={item.image}
+                  sizes="(min-width: 1376px) 109px, (min-width: 1024px) 10vw, 20vw"
+                />
               </CarouselItem>
             )
           })}

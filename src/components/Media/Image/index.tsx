@@ -6,11 +6,8 @@ import { cn } from '@/utilities/cn'
 import NextImage from 'next/image'
 import React from 'react'
 
+import { IMAGE_QUALITY } from '../constants'
 import type { Props as MediaProps } from '../types'
-
-import { cssVariables } from '@/cssVariables'
-
-const { breakpoints } = cssVariables
 
 export const Image: React.FC<MediaProps> = (props) => {
   const {
@@ -36,12 +33,7 @@ export const Image: React.FC<MediaProps> = (props) => {
   let src: StaticImageData | string = srcFromProps || ''
 
   if (!src && resource && typeof resource === 'object') {
-    const {
-      alt: altFromResource,
-      height: fullHeight,
-      url,
-      width: fullWidth,
-    } = resource
+    const { alt: altFromResource, height: fullHeight, url, width: fullWidth } = resource
 
     width = widthFromProps ?? fullWidth
     height = heightFromProps ?? fullHeight
@@ -53,12 +45,10 @@ export const Image: React.FC<MediaProps> = (props) => {
     src = url || ''
   }
 
-  // NOTE: this is used by the browser to determine which image to download at different screen sizes
-  const sizes = sizeFromProps
-    ? sizeFromProps
-    : Object.entries(breakpoints)
-        .map(([, value]) => `(max-width: ${value}px) ${value}px`)
-        .join(', ')
+  // `sizes` tells the browser how wide the image is displayed, which picks the srcset entry to
+  // download. Callers should pass `size` matching their CSS layout; `100vw` is the safe default
+  // because it never asks for an image wider than the viewport.
+  const sizes = sizeFromProps || '100vw'
 
   return (
     <NextImage
@@ -75,7 +65,7 @@ export const Image: React.FC<MediaProps> = (props) => {
         }
       }}
       priority={priority}
-      quality={90}
+      quality={IMAGE_QUALITY}
       sizes={sizes}
       src={src}
       width={!fill ? width || widthFromProps : undefined}

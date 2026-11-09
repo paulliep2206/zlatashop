@@ -15,6 +15,8 @@ export const MediaBlock: React.FC<
     className?: string
     enableGutter?: boolean
     imgClassName?: string
+    /** `sizes` for the image; defaults to the page container width (never wider than it). */
+    size?: string
     staticImage?: StaticImageData
     disableInnerContainer?: boolean
   }
@@ -25,6 +27,7 @@ export const MediaBlock: React.FC<
     enableGutter = true,
     imgClassName,
     media,
+    size = '(min-width: 1376px) 1312px, 100vw',
     staticImage,
     disableInnerContainer,
   } = props
@@ -45,6 +48,7 @@ export const MediaBlock: React.FC<
       <Media
         imgClassName={cn('border border-border rounded-[0.8rem]', imgClassName)}
         resource={media}
+        size={size}
         src={staticImage}
       />
       {caption && (
