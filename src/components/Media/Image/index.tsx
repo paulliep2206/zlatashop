@@ -15,6 +15,7 @@ const { breakpoints } = cssVariables
 export const Image: React.FC<MediaProps> = (props) => {
   const {
     alt: altFromProps,
+    fetchPriority,
     fill,
     height: heightFromProps,
     imgClassName,
@@ -63,6 +64,7 @@ export const Image: React.FC<MediaProps> = (props) => {
     <NextImage
       alt={alt || ''}
       className={cn(imgClassName)}
+      fetchPriority={fetchPriority}
       fill={fill}
       height={!fill ? height || heightFromProps : undefined}
       onClick={onClick}
@@ -77,7 +79,7 @@ export const Image: React.FC<MediaProps> = (props) => {
       sizes={sizes}
       src={src}
       width={!fill ? width || widthFromProps : undefined}
-      loading={priority ? 'eager' : 'lazy'}
+      loading={priority || fetchPriority === 'high' ? 'eager' : 'lazy'}
     />
   )
 }

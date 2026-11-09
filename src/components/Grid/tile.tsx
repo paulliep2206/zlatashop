@@ -16,7 +16,6 @@ type Props = {
 }
 
 export const GridTileImage: React.FC<Props> = ({
-  active,
   isInteractive = true,
   label,
   ...props
@@ -36,7 +35,6 @@ export const GridTileImage: React.FC<Props> = ({
           imgClassName="h-full w-full object-cover"
           resource={props.media}
           width={80}
-          priority={active}
         />
       ) : null}
     </div>
