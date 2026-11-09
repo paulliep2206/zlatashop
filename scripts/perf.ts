@@ -2,20 +2,29 @@
  * Lighthouse performance check with a fixed method, so results stay comparable over time.
  *
  * Usage:
- *   pnpm perf -- <url> [--label "PR #7"] [--page Home] [--notes "..."]
+ *   pnpm perf -- <url> --pr https://github.com/paulliep2206/zlatashop/pull/7 [--spec "Image sizing"] [--page Home] [--notes "..."] [--dry-run]
+ *   pnpm perf -- <url> --label Baseline [--page Home] [--notes "..."] [--dry-run]
  *
  * Runs Lighthouse 3 times (mobile, headless Chrome, pinned version), takes the per-metric
- * median and prints rows ready to paste into docs/performance/results.md.
+ * median and appends one row to each table in docs/performance/results.md ("Core results" and
+ * "Other category scores (medians)"). --pr takes the PR link or just its number. The Core row links to the PR, the other row
+ * says "PR #N", matching the existing rows. --dry-run only prints the rows.
  * Raw reports are saved to lighthouse-reports/ (git-ignored).
  */
 import { spawnSync } from 'node:child_process'
-import { mkdirSync, readFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { parseArgs } from 'node:util'
 
 const LIGHTHOUSE = 'lighthouse@12.8.2'
 const RUNS = 3
 const REPORT_DIR = 'lighthouse-reports'
+const RESULTS_FILE = 'docs/performance/results.md'
+const REPO_URL = 'https://github.com/paulliep2206/zlatashop'
+const CORE_HEADING = '## Core results'
+const OTHER_HEADING = '## Other category scores (medians)'
+const USAGE =
+  'Usage: pnpm perf -- <url> (--pr <PR link or number> [--spec "..."] | --label "...") [--page Home] [--notes "..."] [--dry-run]'
 
 type Report = {
   lighthouseVersion: string
@@ -75,13 +84,33 @@ const { values, positionals } = parseArgs({
   allowPositionals: true,
   options: {
     label: { type: 'string' },
+    pr: { type: 'string' },
+    spec: { type: 'string' },
     page: { type: 'string' },
     notes: { type: 'string' },
+    'dry-run': { type: 'boolean' },
   },
 })
 
 const rawUrl = positionals[0]
-if (!rawUrl) fail('missing URL. Usage: pnpm perf -- <url> [--label "PR #7"] [--page Home]')
+if (!rawUrl) fail(`missing URL. ${USAGE}`)
+if (positionals.length > 1) {
+  fail(
+    `unexpected arguments: ${positionals.slice(1).join(' ')}\n` +
+      `Quote values that contain spaces or #, e.g. --spec "Image sizing". ${USAGE}`,
+  )
+}
+// --pr accepts a pasted GitHub PR link (kept as is) or a bare number (linked to this repo).
+const prMatch = values.pr
+  ?.trim()
+  .match(/^(?:(https:\/\/github\.com\/[^/\s]+\/[^/\s]+\/pull\/(\d+))\S*|#?(\d+))$/)
+if (values.pr && !prMatch) {
+  fail(`--pr must be a GitHub PR link or number, got "${values.pr}"`)
+}
+const prNumber = prMatch ? (prMatch[2] ?? prMatch[3]) : undefined
+const prUrl = prMatch ? (prMatch[1] ?? `${REPO_URL}/pull/${prNumber}`) : undefined
+if (values.pr && values.label) fail('use either --pr or --label, not both')
+if (!values.pr && !values.label && !values.spec) fail(`missing --pr, --spec or --label. ${USAGE}`)
 
 let url: URL
 try {
@@ -91,9 +120,16 @@ try {
 }
 
 const page = values.page ?? pageFromUrl(url)
-const label = values.label ?? '?'
+// Core table links the PR and adds the spec in brackets; the other table uses the short form.
+const coreLabel = prNumber
+  ? `[PR #${prNumber}](${prUrl})${values.spec ? ` (${values.spec})` : ''}`
+  : (values.label ?? values.spec ?? '')
+const otherLabel = prNumber ? `PR #${prNumber}` : (values.label ?? values.spec ?? '')
 const date = new Date().toISOString().slice(0, 10)
-const slug = page.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+const toSlug = (text: string): string => text.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+const slug = toSlug(page)
+// Label in the file name so a second measurement on the same day doesn't overwrite the first.
+const reportPrefix = `${date}-${toSlug(otherLabel)}-${slug}`
 
 mkdirSync(REPORT_DIR, { recursive: true })
 
@@ -101,7 +137,7 @@ console.log(`${LIGHTHOUSE}, mobile, ${RUNS} runs: ${url.href}`)
 
 const results: RunResult[] = []
 for (let run = 1; run <= RUNS; run++) {
-  const outputPath = path.join(REPORT_DIR, `${date}-${slug}-run${run}.json`)
+  const outputPath = path.join(REPORT_DIR, `${reportPrefix}-run${run}.json`)
   const started = Date.now()
   process.stdout.write(`  run ${run}/${RUNS}... `)
 
@@ -123,7 +159,9 @@ for (let run = 1; run <= RUNS; run++) {
   if (child.status !== 0) {
     const output = `${child.stderr ?? ''}${child.stdout ?? ''}`.trim()
     if (/chrome/i.test(output) && /(not found|no chrome|launch)/i.test(output)) {
-      fail(`Lighthouse could not find or launch Chrome. Install Google Chrome or set CHROME_PATH.\n${output}`)
+      fail(
+        `Lighthouse could not find or launch Chrome. Install Google Chrome or set CHROME_PATH.\n${output}`,
+      )
     }
     fail(`Lighthouse exited with code ${child.status}.\n${output}`)
   }
@@ -136,7 +174,9 @@ for (let run = 1; run <= RUNS; run++) {
   }
 
   if (report.runtimeError) {
-    fail(`run ${run} had a runtime error: ${report.runtimeError.code} ${report.runtimeError.message}`)
+    fail(
+      `run ${run} had a runtime error: ${report.runtimeError.code} ${report.runtimeError.message}`,
+    )
   }
   if (report.lighthouseVersion !== LIGHTHOUSE.split('@')[1]) {
     fail(`expected Lighthouse ${LIGHTHOUSE}, got ${report.lighthouseVersion}`)
@@ -186,12 +226,48 @@ const autoNotes = [
   .join('; ')
 const notes = values.notes ? `${values.notes}; ${autoNotes}` : autoNotes
 
-const row = (cells: (string | number)[]): string => `| ${cells.join(' | ')} |`
+const cell = (value: string | number): string => String(value).replace(/\|/g, '\\|')
+const row = (cells: (string | number)[]): string => `| ${cells.map(cell).join(' | ')} |`
+
+// Inserts the row after the last line of the first table below the heading.
+const appendRow = (markdown: string, heading: string, newRow: string): string => {
+  const lines = markdown.split('\n')
+  const start = lines.findIndex((line) => line.trim() === heading)
+  if (start === -1) fail(`heading "${heading}" not found in ${RESULTS_FILE}`)
+  let end = start + 1
+  while (end < lines.length && !lines[end].startsWith('|')) {
+    if (lines[end].startsWith('#')) fail(`no table under "${heading}" in ${RESULTS_FILE}`)
+    end++
+  }
+  if (end === lines.length) fail(`no table under "${heading}" in ${RESULTS_FILE}`)
+  while (end < lines.length && lines[end].startsWith('|')) end++
+  lines.splice(end, 0, newRow)
+  return lines.join('\n')
+}
+
+const coreRow = row([
+  date,
+  coreLabel,
+  page,
+  m.perf,
+  formatLcp(m.lcpMs),
+  formatCls(m.cls),
+  formatTbt(m.tbtMs),
+  notes,
+])
+const otherRow = row([date, otherLabel, page, m.a11y, m.bestPractices, m.seo])
 
 console.log('\nCore results row:')
-console.log(
-  row([date, label, page, m.perf, formatLcp(m.lcpMs), formatCls(m.cls), formatTbt(m.tbtMs), notes]),
-)
+console.log(coreRow)
 console.log('\nOther category scores row:')
-console.log(row([date, label, page, m.a11y, m.bestPractices, m.seo]))
-console.log(`\nRaw reports: ${REPORT_DIR}/${date}-${slug}-run{1..${RUNS}}.json`)
+console.log(otherRow)
+console.log(`\nRaw reports: ${REPORT_DIR}/${reportPrefix}-run{1..${RUNS}}.json`)
+
+if (values['dry-run']) {
+  console.log(`\n--dry-run: ${RESULTS_FILE} not changed.`)
+} else {
+  const markdown = readFileSync(RESULTS_FILE, 'utf8')
+  const updated = appendRow(appendRow(markdown, CORE_HEADING, coreRow), OTHER_HEADING, otherRow)
+  writeFileSync(RESULTS_FILE, updated)
+  console.log(`\nAppended both rows to ${RESULTS_FILE}. Review with: git diff ${RESULTS_FILE}`)
+}
