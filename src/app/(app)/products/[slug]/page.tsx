@@ -12,7 +12,7 @@ import { draftMode } from 'next/headers'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getPayload } from 'payload'
-import React, { Suspense } from 'react'
+import React from 'react'
 import { getProductPrice } from '@/lib/pricing'
 
 type Args = {
@@ -117,13 +117,7 @@ export default async function ProductPage({ params }: Args) {
         </Button>
         <div className="flex flex-col gap-12 rounded-lg border p-8 md:py-12 lg:flex-row lg:gap-8">
           <div className="h-full w-full basis-full lg:basis-1/2">
-            <Suspense
-              fallback={
-                <div className="relative aspect-square h-full max-h-[550px] w-full overflow-hidden" />
-              }
-            >
-              {Boolean(gallery?.length) && <Gallery gallery={gallery} />}
-            </Suspense>
+            {Boolean(gallery?.length) && <Gallery gallery={gallery} />}
           </div>
 
           <div className="basis-full lg:basis-1/2">

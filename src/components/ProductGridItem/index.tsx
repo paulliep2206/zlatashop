@@ -8,10 +8,11 @@ import Link from 'next/link'
 import React, { Suspense } from 'react'
 
 type Props = {
+  isLcpElement?: boolean
   product: Partial<Product>
 }
 
-export const ProductGridItem: React.FC<Props> = ({ product }) => {
+export const ProductGridItem: React.FC<Props> = ({ isLcpElement = false, product }) => {
   const { gallery, price, specialPrice, author, title } = product
 
   const isSimpleProduct = product.productType === 'simple'
@@ -24,6 +25,7 @@ export const ProductGridItem: React.FC<Props> = ({ product }) => {
         {image ? (
           <Media
             className={clsx('relative aspect-square object-cover')}
+            fetchPriority={isLcpElement ? 'high' : undefined}
             height={80}
             imgClassName={clsx('h-full w-full object-cover', {
               'transition duration-300 ease-in-out group-hover:scale-102': true,

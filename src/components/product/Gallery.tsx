@@ -21,6 +21,7 @@ export const Gallery: React.FC<Props> = ({ gallery }) => {
         <Media
           resource={gallery[current].image}
           className="w-full"
+          fetchPriority="high"
           imgClassName="w-full rounded-lg"
         />
       </div>

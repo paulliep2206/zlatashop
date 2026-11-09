@@ -1,7 +1,6 @@
 import type { Media as MediaType } from '@/payload-types'
 
 import { Media } from '@/components/Media'
-import { Label } from '@/components/Grid/Label'
 import clsx from 'clsx'
 import React from 'react'
 
@@ -17,7 +16,6 @@ type Props = {
 }
 
 export const GridTileImage: React.FC<Props> = ({
-  active,
   isInteractive = true,
   label,
   ...props

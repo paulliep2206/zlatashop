@@ -36,6 +36,7 @@ const nextConfig: NextConfig = {
       { hostname: 'utfs.io', protocol: 'https' },
       { hostname: 'uploadthing.com', protocol: 'https' },
     ],
+    minimumCacheTTL: 2678400,
   },
   reactStrictMode: true,
   redirects,

@@ -153,8 +153,8 @@ export default async function CategoryPage({ params }: Args) {
 
       {products.docs.length > 0 ? (
         <Grid className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {products.docs.map((product) => (
-            <ProductGridItem key={product.id} product={product} />
+          {products.docs.map((product, index) => (
+            <ProductGridItem key={product.id} isLcpElement={index < 3} product={product} />
           ))}
         </Grid>
       ) : (
