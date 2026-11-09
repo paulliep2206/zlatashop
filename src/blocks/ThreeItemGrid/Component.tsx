@@ -23,6 +23,11 @@ export const ThreeItemGridItem: React.FC<Props> = ({ item, size }) => {
             title: item.title,
           }}
           media={item.meta?.image as Media}
+          sizes={
+            size === 'full'
+              ? '(min-width: 1376px) 870px, (min-width: 768px) 67vw, 100vw'
+              : '(min-width: 1376px) 427px, (min-width: 768px) 33vw, 100vw'
+          }
         />
       </Link>
     </div>

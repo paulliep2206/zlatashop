@@ -22,6 +22,7 @@ export const ImageTextBlock: React.FC<ImageTextBlockProps> = ({
           className={cn('md:row-start-1', imageFirst ? 'order-1 md:order-2' : 'order-2 md:order-1')}
           imgClassName="h-auto w-full rounded-[0.8rem] object-cover"
           resource={image}
+          size="(min-width: 1376px) 624px, (min-width: 768px) 50vw, 100vw"
         />
       </div>
     </div>

@@ -32,6 +32,8 @@ export const MediumImpactHero: React.FC<Page['hero']> = ({ links, media, richTex
               imgClassName=""
               priority
               resource={media}
+              // Container width plus the negative margins (2xl:-mx-16): 1312 + 2 × 64 = 1440px.
+              size="(min-width: 1376px) 1440px, 100vw"
             />
             {media?.caption && (
               <div className="mt-3">

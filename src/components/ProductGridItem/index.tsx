@@ -26,11 +26,14 @@ export const ProductGridItem: React.FC<Props> = ({ isLcpElement = false, product
           <Media
             className={clsx('relative aspect-square object-cover')}
             fetchPriority={isLcpElement ? 'high' : undefined}
+            // width/height only set the intrinsic aspect ratio; the rendered size comes from CSS and
+            // the downloaded size from `size` (grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 in .container).
             height={80}
             imgClassName={clsx('h-full w-full object-cover', {
               'transition duration-300 ease-in-out group-hover:scale-102': true,
             })}
             resource={image}
+            size="(min-width: 1376px) 448px, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
             width={80}
           />
         ) : null}
