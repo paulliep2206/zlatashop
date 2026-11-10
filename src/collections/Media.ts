@@ -5,13 +5,8 @@ import {
   InlineToolbarFeature,
   lexicalEditor,
 } from '@payloadcms/richtext-lexical'
-import path from 'path'
-import { fileURLToPath } from 'url'
 
 import { adminOnly } from '@/access/adminOnly'
-
-const filename = fileURLToPath(import.meta.url)
-const dirname = path.dirname(filename)
 
 export const Media: CollectionConfig = {
   admin: {
@@ -48,6 +43,12 @@ export const Media: CollectionConfig = {
       if (headers.get('content-length') === '0') {
         headers.delete('content-length')
       }
+
+      // Vercel's image optimizer takes the browser cache lifetime for `/_next/image` from this
+      // header (it ignores `minimumCacheTTL`). Filenames aren't content-hashed, so keep it short
+      // enough that a re-upload under the same name shows up within about a day.
+      // See docs/specs/image-cache-lifetime.md.
+      headers.set('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800')
 
       return headers
     },
